@@ -1,429 +1,614 @@
-# Phase 09 — Pure JavaScript MERN Architecture & High-Performance CMS Design
+# Phase 09 — MERN Architecture & Data Model
 
-## 1. Executive Summary & Pure JavaScript Architecture
+## 1. Executive Summary & Architecture
 
-This phase articulates the complete technical architecture for the rebuilt STEMOTICS platform and custom CMS using an **end-to-end, pure JavaScript MERN stack (MongoDB, Express.js, React.js, Node.js)**. 
-
-Using pure JavaScript across the entire stack eliminates context-switching, unifies data schemas across client and server, and enables a streamlined, lightning-fast CMS experience for non-technical users—particularly for uploading large image batches, rich-text formatting, and live section editing without server freezing.
+This phase defines the technical architecture of the STEMOTICS platform on a JavaScript-only MERN stack (MongoDB, Express, React, Node.js). It specifies the data model behind the brief's core rules — **shared time-slot capacity (§1)**, **monthly billing with the 4-week cancellation rule (§5)**, **staff-managed filters (§6)**, **camps and themes (§3)** and the **medical form (§4)** — and how background jobs run safely.
 
 ```mermaid
 graph TD
-    subgraph Client Presentation Layer (Pure JavaScript / React.js)
-        A[React.js 19 SPA Vite Bundler]
-        B[Tailwind CSS v4 + Lucide Icons]
-        C[TipTap Headless Rich-Text Editor]
-        D[Uppy.js Direct Cloud Media Uploader]
-        E[Framer Motion Micro-Interactions]
+    subgraph Client["Client (React 19 + Vite)"]
+        A["Public site: SSR / prerendered pages (React Router v7 framework mode — D-8)"]
+        B["Admin CMS: client-rendered React app"]
+        C["TipTap editor, Uppy uploader"]
     end
 
-    subgraph API & Application Gateway Layer (Node.js & Express.js)
-        F[Express.js RESTful API Cluster]
-        G[JWT Auth with HttpOnly Cookies & RBAC]
-        H[Zod / Joi JavaScript Schema Validation]
-        I[Helmet Security & DOMPurify Sanitization]
-        J[Stripe & Helcim Webhook Receivers]
+    subgraph API["API (Node.js + Express, PM2 cluster)"]
+        F["REST API /api/v1"]
+        G["Auth: JWT access + refresh cookies, RBAC"]
+        H["Validation: Zod"]
+        J["Webhooks: Stripe / Helcim (raw body)"]
     end
 
-    subgraph Background Service Engines (Node.js)
-        K[Node-Cron Scheduled Recurring Billing]
-        L[Automated Medical Form Dispatcher]
-        M[Twilio Canadian SMS Engine]
-        N[Puppeteer Letter Landscape PDF Generator]
+    subgraph Worker["Worker (Node.js, exactly ONE process)"]
+        K["Monthly billing + retries"]
+        L["Seat-hold expiry + enrolment end"]
+        M["Medical form reminders"]
+        N["Nightly seat-count reconciliation"]
     end
 
-    subgraph Data & Storage Layer
-        O[(MongoDB Atlas with Field-Level Encryption)]
-        P[Cloudinary Direct CDN Storage WebP/AVIF]
-        Q[(Redis / In-Memory State Cache)]
+    subgraph Data["Data & Services"]
+        O[("MongoDB Atlas replica set + CSFLE")]
+        P["Cloudinary"]
+        S["Helcim / Stripe / Twilio / Email provider"]
     end
 
-    A & C & D --> F
-    F --> G --> H --> I
-    I --> O
-    I --> P & Q
-    I --> K & L & M & N
-    D -.->|Presigned Signature Upload| P
+    A & B & C --> F
+    F --> G --> H --> O
+    J --> O
+    F --> P
+    K & L & M & N --> O
+    K & M --> S
+    C -.->|signed direct upload| P
 ```
 
----
-
-## 2. Pure JavaScript Technology Stack & Key Libraries
-
-Every tier of the platform is built using pure JavaScript, optimized for execution speed, developer ergonomics, and minimal server footprint:
-
-| Tier | JavaScript Technology | Version | Purpose & Architecture Rationale |
-|---|---|---|---|
-| **Frontend Framework** | **React.js (`.jsx`)** | `^19.0.0` | Component-based, responsive SPA. Enables instant optimistic UI updates and fast client-side routing. |
-| **Frontend Bundler** | **Vite (`vite`)** | `^6.0.0` | Pure JavaScript native ES modules tooling; sub-second development server start and optimized production bundling. |
-| **Styling Engine** | **Tailwind CSS (`tailwindcss`)** | `^4.0.0` | Utility-first CSS compiling to a tiny atomic stylesheet containing the exact verified brand tokens (`#00309A`, `#D9F293`, `#111111`). |
-| **Rich-Text CMS Editor** | **TipTap (`@tiptap/react`)** | `^2.10.0` | Headless, modular JavaScript rich-text editor based on ProseMirror. Provides a clean Notion-like experience for non-technical staff and outputs semantic HTML/JSON. |
-| **Direct Media Uploader** | **Uppy (`@uppy/react`, `@uppy/core`)** | `^4.2.0` | High-speed drag-and-drop file uploader supporting multi-part parallel uploads directly to cloud storage. |
-| **UI Micro-Animations** | **Framer Motion (`framer-motion`)** | `^11.11.0` | Fluid accordion transitions, slide-out cart drawers, and modal animations. |
-| **Icons** | **Lucide React (`lucide-react`)** | `^0.460.0` | Lightweight, tree-shakeable icons for course cards, navigation, and admin modules. |
-| **Backend Runtime** | **Node.js (LTS)** | `v22.x` | Asynchronous, event-driven JavaScript runtime with high I/O throughput. |
-| **Backend API Framework**| **Express.js (`express`)** | `^4.21.0` | Minimalist, robust JavaScript web framework powering the REST API. |
-| **Database ODM** | **Mongoose (`mongoose`)** | `^8.8.0` | Pure JavaScript object modeling for MongoDB with schema validation and pre/post middleware hooks. |
-| **Scheduling Engine** | **Node-Cron (`node-cron`)** | `^3.0.3` | Lightweight in-process job scheduler for nightly recurring charges, medical reminders, and capacity sync. |
-| **Document Generator** | **Puppeteer (`puppeteer`)** | `^23.8.0` | Headless Chrome automation in JavaScript for compiling pixel-perfect 8.5" $\times$ 11" printable PDF rosters and attendance sheets. |
-| **Authentication** | **jsonwebtoken & bcryptjs** | `^9.0.2` / `^2.4.3` | Pure JavaScript stateless JWT authentication stored in secure HttpOnly cookies with RBAC guards. |
-| **Security & Sanitization**| **Helmet & Isomorphic-DOMPurify** | `^8.0.0` / `^2.16.0` | HTTP security headers and sanitization of rich-text content to prevent stored XSS attacks. |
-| **Payment SDKs** | **Stripe & Axios (Helcim)** | `^17.3.0` / `^1.7.0` | Official JavaScript payment integrations for one-time camp payments and recurring subscriptions. |
-| **SMS Communications** | **Twilio (`twilio`)** | `^5.3.0` | Official Twilio Node.js helper library for order SMS alerts and Canadian CASL-compliant promo broadcasts. |
-| **Email Service** | **Nodemailer (`nodemailer`)** | `^6.9.0` | Versatile email sending client for SMTP, SendGrid, Amazon SES, or Resend. |
+**Key rules:**
+- Scheduled jobs run **only in the worker**, never inside the clustered API. With PM2 cluster mode, every API instance would otherwise run the billing job and charge parents several times.
+- All business dates (start dates, billing dates, camp dates) are **calendar dates in `America/Toronto`**, stored as `YYYY-MM-DD` strings. Timestamps (createdAt, payment times) are stored as UTC `Date`s.
+- Seat reservation, billing and webhooks are **idempotent**: running them twice never double-books or double-charges.
 
 ---
 
-## 3. High-Performance CMS Architecture for Non-Technical Users
+## 2. Technology Stack
 
-To fulfill the user requirement that **uploading and managing images, text, and other content is fast and efficient without developer assistance**, the system implements a decoupled, direct-to-cloud media architecture and modular visual block editing:
+Versions are pinned to the current stable release at project kickoff (earlier drafts listed late-2024 versions).
 
-### 3.1 Direct-to-Cloud Upload Pipeline (Zero Server Overhead)
+| Tier | Technology | Purpose |
+|---|---|---|
+| Frontend framework | React 19 (`.jsx`) | UI for public site and admin |
+| Rendering / routing | React Router v7 framework mode on Vite (D-8) | SSR/prerender for public pages; SPA for admin |
+| Styling | Tailwind CSS v4 | Design tokens from [Phase 02](Phase-02-Brand-Design-System.md) |
+| Rich text | TipTap (`@tiptap/react`) | Page, FAQ and course description editing |
+| Uploads | Uppy (`@uppy/react`) | Signed direct uploads to Cloudinary |
+| Animation / icons | Framer Motion (`motion`), Lucide React | UI polish |
+| Runtime | Node.js Active LTS (Node 24 at time of writing; Node 22 is end-of-life April 2027) | API and worker |
+| API framework | Express 5 | REST API |
+| ODM | Mongoose (current major) | Schemas, validation |
+| Field encryption | MongoDB CSFLE (`mongodb-client-encryption`) + cloud KMS | Medical/emergency fields ([Phase 08](Phase-08-SEO-Security-Backups.md)) |
+| Dates | Luxon | Time-zone-safe calendar maths (`America/Toronto`) |
+| Scheduling | node-cron (in the worker only) | Billing, holds, reminders |
+| Auth | jsonwebtoken, bcrypt, cookie-parser | Sessions and passwords |
+| Security | Helmet, express-rate-limit (shared store if >1 API instance), Zod, DOMPurify (server-side sanitising) | Headers, rate limits, validation, XSS protection |
+| Payments | Helcim API (HelcimPay.js), Stripe Node SDK | Per [Decision D-1](README.md#5-pending-decisions) |
+| SMS / Email | Twilio Node SDK; Nodemailer with SendGrid / SES / Resend | Notifications |
+| Testing | Vitest or Jest, Supertest, `mongodb-memory-server` (replica-set mode), Playwright | Unit, API and end-to-end tests |
 
-Traditional CMS platforms upload large photos directly to the web server, causing CPU spikes, memory exhaustion, and slow upload progress bars. The STEMOTICS CMS replaces this with a **Presigned Direct-to-CDN Upload Pipeline**:
+---
+
+## 3. Content Editing & Media Uploads
+
+### 3.1 Direct-to-Cloudinary Upload
 
 ```mermaid
 sequenceDiagram
     autonumber
-    actor Staff as Non-Technical Staff
-    participant UI as CMS React Uploader (Uppy)
-    participant API as Express API Server
-    participant CDN as Cloudinary / AWS S3
-    participant DB as MongoDB Atlas
+    actor Staff
+    participant UI as CMS (Uppy)
+    participant API as Express API
+    participant CDN as Cloudinary
+    participant DB as MongoDB
 
-    Staff->>UI: Drags 15MB High-Res Camp Photo into CMS
-    UI->>API: GET /api/v1/media/sign-upload (Request Auth Signature)
-    API-->>UI: Return Cryptographic Signature & Timestamp (5ms)
-    UI->>CDN: Direct Multi-Part Stream to CDN Edge (Bypasses Node.js Server)
-    CDN-->>CDN: Auto-Convert to WebP/AVIF & Generate 3 Thumbnails
-    CDN-->>UI: Return Optimized Public URL & Metadata
-    UI->>API: POST /api/v1/gallery (Save Clean URL, Title, Ascending Date)
-    API->>DB: Persist Document in MongoDB (<10ms)
-    API-->>UI: Instant Confirmation & Live Preview
+    Staff->>UI: Drops photos into the gallery uploader
+    UI->>API: POST /api/v1/admin/media/sign (authenticated, role checked)
+    API-->>UI: Upload signature + timestamp + folder
+    UI->>CDN: Upload file directly (does not pass through the API server)
+    CDN-->>UI: public_id, URL, width, height
+    UI->>API: POST /api/v1/admin/gallery { title, entryDate, public_id }
+    API->>DB: Save gallery item
 ```
 
-1. **Client-Side Drag-and-Drop:** Built using `@uppy/react` with real-time percentage progress bars, image preview, and file-type restrictions (PNG, JPG, WEBP, MP4).
-2. **Instant Signed Upload:** The Express server generates a secure upload signature in $< 5\text{ms}$.
-3. **Automatic Cloud Optimization:** The CDN automatically compresses images, generates responsive WebP variants, and creates thumbnails (`150px`, `600px`, `1200px`).
-4. **Ascending Date Ordering:** The CMS automatically tags photos and videos with their event date and enforces the client requirement: **displaying entries in ascending date order**.
+- Allowed types: JPG, PNG, WebP, HEIC (images); videos default to YouTube links.
+- Size limit per file (e.g. 20 MB) enforced both in Uppy and in the Cloudinary upload preset.
+- Cloudinary serves resized WebP/AVIF variants on demand (`f_auto,q_auto,w_…`).
 
-### 3.2 Modular Visual Content Editor (TipTap + Section Blocks)
-
-Instead of complex code or fragile page builders, staff interact with structured, visual forms:
-- **Hero Slider Manager:** Simple form cards with Headline, Subtext, Image Dropzone, CTA Label, and Link selector. Drag handles allow easy reordering.
-- **Metric Counters Manager:** Plain number fields for *Children Benefited (`5,000+`)*, *Schools (`20+`)*, *Community Centres (`35+`)*, and *Staff (`15+`)*.
-- **Rich-Text Content (TipTap):** For About Us, FAQs, and Course Syllabi, staff format headings, bullet points, and embeds via a clean floating toolbar.
-- **Live Viewport Preview:** Instant toggle between Desktop (1440px), Tablet (768px), and Mobile (375px) before saving changes.
+### 3.2 Structured Content Editing
+Homepage slides, impact figures, staff profiles, testimonials and static pages are edited through structured forms (see [Phase 03](Phase-03-CMS-Architecture.md)). TipTap output is sanitised on the server before saving.
 
 ---
 
-## 4. Pure JavaScript Database Schemas (Mongoose)
+## 4. Data Model (Mongoose)
 
-All database entities are defined in pure JavaScript (`.js` files) using Mongoose ODM:
+### 4.1 Overview
 
-### 4.1 Course & TimeSlot Schema (`models/Course.js`)
-*Enforces default 9-student slot capacity, automatic closure, and weekday binding.*
+```mermaid
+erDiagram
+    USER ||--o{ CHILD : "parent of"
+    CHILD ||--o| MEDICALFORM : has
+    COURSE }o--o{ TIMESLOT : "offered in"
+    COURSE }o--o{ FILTEROPTION : "tagged with"
+    FILTERGROUP ||--o{ FILTEROPTION : contains
+    ENROLLMENT }o--|| CHILD : for
+    ENROLLMENT }o--|| COURSE : in
+    ENROLLMENT }o--|| TIMESLOT : "occupies seat in"
+    ENROLLMENT ||--o| SUBSCRIPTION : "billed by"
+    SUBSCRIPTION ||--o{ CHARGE : "monthly charges"
+    CAMP ||--o{ CAMPREGISTRATION : has
+    CAMPREGISTRATION }o--|| CHILD : for
+    ORDER ||--o{ ENROLLMENT : contains
+    ORDER ||--o{ CAMPREGISTRATION : contains
+```
+
+`User`, `Child` and `Order` are standard and not shown in full. `Child` stores first name, last name, date of birth and parent reference. To keep the snippets short, later snippets omit the `require('mongoose')` / `const { ObjectId } = mongoose.Schema.Types` lines shown in §4.3, and the `module.exports = mongoose.model(...)` line.
+
+### 4.2 Time Slots & Seat Reservation (Brief §1)
+
+Capacity belongs to the **time slot**, shared by every regular program offered in it.
+
+```javascript
+// models/TimeSlot.js
+const mongoose = require('mongoose');
+
+const timeSlotSchema = new mongoose.Schema({
+  dayOfWeek: { type: Number, required: true, min: 1, max: 7 }, // ISO weekday: 1 = Monday ... 7 = Sunday (matches Luxon)
+  startTime: { type: String, required: true },                 // "17:00" (America/Toronto)
+  endTime: { type: String, required: true },                   // "18:00"
+  label: { type: String, required: true },                     // "Monday 5:00 – 6:00 PM"
+  capacity: { type: Number, required: true, default: 9, min: 0 }, // Brief §1: default 9, editable per slot
+  occupiedCount: { type: Number, required: true, default: 0, min: 0 }, // held + active + cancellation_pending enrolments
+  isActive: { type: Boolean, default: true }
+}, { timestamps: true });
+
+timeSlotSchema.index({ dayOfWeek: 1, startTime: 1 }, { unique: true });
+
+// "Full" is derived, never stored, so it can't go stale when capacity changes.
+timeSlotSchema.virtual('isFull').get(function () {
+  return this.occupiedCount >= this.capacity;
+});
+
+module.exports = mongoose.model('TimeSlot', timeSlotSchema);
+```
+
+```javascript
+// services/seatService.js
+const TimeSlot = require('../models/TimeSlot');
+const { ConflictError } = require('../utils/errors');
+
+// Atomically take a seat only if one is free. Two parents racing for the last
+// seat cannot both succeed: MongoDB applies the filter and $inc as one operation.
+async function reserveSeat(timeSlotId, session) {
+  const slot = await TimeSlot.findOneAndUpdate(
+    { _id: timeSlotId, isActive: true, $expr: { $lt: ['$occupiedCount', '$capacity'] } },
+    { $inc: { occupiedCount: 1 } },
+    { new: true, session }
+  );
+  if (!slot) throw new ConflictError('TIME_SLOT_FULL'); // API responds 409
+  return slot;
+}
+
+async function releaseSeat(timeSlotId, session) {
+  await TimeSlot.updateOne(
+    { _id: timeSlotId, occupiedCount: { $gt: 0 } },
+    { $inc: { occupiedCount: -1 } },
+    { session }
+  );
+}
+
+module.exports = { reserveSeat, releaseSeat };
+```
+
+**Lifecycle:**
+1. **Checkout:** in one transaction, `reserveSeat()` and create the `Enrollment` with `status: 'held'`, `holdExpiresAt = now + 15 min`.
+2. **Payment approved** (webhook or synchronous response): enrolment → `active`.
+3. **Payment failed / hold expired:** the worker changes `held` → `expired` **with the filter `status: 'held'`** and calls `releaseSeat()` only if that update modified a document, so a seat is never released twice.
+4. **Enrolment ends** (service end date passed after cancellation): `cancellation_pending` → `ended`, release seat. The slot reopens automatically.
+5. **Staff change capacity:** a plain update of `capacity`; `isFull` is derived, so the slot opens/closes immediately.
+6. **Nightly reconciliation:** the worker recounts enrolments per slot and alerts staff if `occupiedCount` ever differs.
+
+Seat-counting start (from booking vs. from start date) is pending [Decision D-7](README.md#5-pending-decisions); this design counts from booking.
+
+### 4.3 Course
 
 ```javascript
 // models/Course.js
 const mongoose = require('mongoose');
+const { ObjectId } = mongoose.Schema.Types;
 
-const timeSlotSchema = new mongoose.Schema({
-  dayOfWeek: { type: Number, required: true }, // 1 = Monday, 2 = Tuesday, ... 6 = Saturday
-  dayLabel: { type: String, required: true },  // e.g. "Monday"
-  startTime: { type: String, required: true }, // "17:00"
-  endTime: { type: String, required: true },   // "18:00"
-  displayTime: { type: String, required: true },// "5:00 PM – 6:00 PM"
-  capacity: { type: Number, default: 9 },      // CLIENT REQUIREMENT: Default 9 children per slot
-  enrolledCount: { type: Number, default: 0 },
-  isClosed: { type: Boolean, default: false }  // Auto-set: enrolledCount >= capacity
+const levelSchema = new mongoose.Schema({
+  name: { type: String, required: true },   // "Level 1 – Express Coding Course"
+  code: { type: String, required: true }    // "STC2001"
 });
 
 const courseSchema = new mongoose.Schema({
-  title: { type: String, required: true, trim: true },
-  courseCode: { type: String, required: true, unique: true, uppercase: true }, // e.g. STAI4001, STR2001
-  slug: { type: String, required: true, unique: true, lowercase: true },
-  category: { 
-    type: String, 
-    required: true,
-    enum: ['regular-programs', 'camps', 'competitions', 'schools', 'birthday-party', 'homeschool', 'introductory'] 
-  },
-  ageLevels: [{ type: String }], // 'Ages 4-5', 'Ages 6-8', 'Ages 9-12', 'Ages 13-15'
-  difficulty: { type: String, enum: ['Basic', 'Intermediate', 'Advanced'], default: 'Basic' },
-  syllabus: { type: String }, // TipTap HTML
-  hardwarePlatforms: [{ type: String }], // 'LEGO SPIKE', 'Sphero', 'Arduino'
-  pricingModel: { type: String, enum: ['monthly_recurring', 'one_time'], required: true },
-  monthlyFee: { type: Number },
-  oneTimeFee: { type: Number },
-  filterTags: [{ type: String }],
-  isActive: { type: Boolean, default: true },
-  timeSlots: [timeSlotSchema]
+  title: { type: String, required: true, trim: true },          // "Coding Junior"
+  code: { type: String, required: true, unique: true, uppercase: true }, // "STC2001"
+  slug: { type: String, required: true, unique: true, lowercase: true }, // "coding-junior"
+  // Business behaviour (fixed list, developer-owned) — separate from display filters.
+  productType: { type: String, required: true, enum: ['regular_program', 'camp', 'one_time'] },
+  levels: [levelSchema],
+  timeSlots: [{ type: ObjectId, ref: 'TimeSlot' }],   // which shared slots this course is offered in
+  filterOptions: [{ type: ObjectId, ref: 'FilterOption', index: true }], // Brief §6 tagging
+  description: { type: String },                      // sanitised TipTap HTML
+  monthlyFee: { type: Number },                       // cents, for regular programs
+  oneTimeFee: { type: Number },                       // cents, for one-time products
+  ageMin: { type: Number }, ageMax: { type: Number },
+  isActive: { type: Boolean, default: true }
 }, { timestamps: true });
-
-// Pre-save middleware: auto-close slot when capacity is reached
-courseSchema.pre('save', function (next) {
-  this.timeSlots.forEach(slot => {
-    slot.isClosed = slot.enrolledCount >= slot.capacity;
-  });
-  next();
-});
 
 module.exports = mongoose.model('Course', courseSchema);
 ```
 
-### 4.2 Recurring Subscription & 4-Week Cancellation Schema (`models/Subscription.js`)
-*Calculates and enforces the 4-week cancellation notice requirement.*
+Money is stored in **cents** (integers) to avoid floating-point rounding.
+
+### 4.4 Filter Groups & Options (Brief §6)
+
+```javascript
+// models/FilterGroup.js
+const filterGroupSchema = new mongoose.Schema({
+  name: { type: String, required: true },          // "Age Level"
+  slug: { type: String, required: true, unique: true },
+  sortOrder: { type: Number, default: 0 },
+  isActive: { type: Boolean, default: true }
+}, { timestamps: true });
+
+// models/FilterOption.js
+const filterOptionSchema = new mongoose.Schema({
+  group: { type: mongoose.Schema.Types.ObjectId, ref: 'FilterGroup', required: true, index: true },
+  label: { type: String, required: true },         // "Ages 6-8"
+  slug: { type: String, required: true },
+  sortOrder: { type: Number, default: 0 }
+}, { timestamps: true });
+filterOptionSchema.index({ group: 1, slug: 1 }, { unique: true });
+```
+
+**Listing query** (OR within a group, AND across groups):
+
+```javascript
+// selected = { 'age-level': [optId1, optId2], 'course-categories': [optId3] }
+const groupClauses = Object.values(selected)
+  .filter(ids => ids.length > 0)                      // no selection in a group = no restriction
+  .map(ids => ({ filterOptions: { $in: ids } }));
+const filter = { isActive: true, ...(groupClauses.length && { $and: groupClauses }) };
+const courses = await Course.find(filter).sort({ title: 1 });
+```
+
+Deleting a group/option runs `Course.updateMany({}, { $pull: { filterOptions: { $in: removedIds } } })` in the same transaction.
+
+### 4.5 Enrollment, Subscription & Charge (Brief §5)
+
+```javascript
+// models/Enrollment.js
+const enrollmentSchema = new mongoose.Schema({
+  order: { type: ObjectId, ref: 'Order', required: true },
+  child: { type: ObjectId, ref: 'Child', required: true, index: true },
+  course: { type: ObjectId, ref: 'Course', required: true },
+  levelCode: { type: String },                                  // "STC2002"
+  timeSlot: { type: ObjectId, ref: 'TimeSlot', required: true, index: true },
+  startDate: { type: String, required: true },                  // "2027-04-12", must fall on the slot's weekday
+  status: { type: String, enum: ['held', 'active', 'cancellation_pending', 'ended', 'expired'], default: 'held', index: true },
+  holdExpiresAt: { type: Date },
+  serviceEndDate: { type: String }                              // set on cancellation
+}, { timestamps: true });
+```
 
 ```javascript
 // models/Subscription.js
-const mongoose = require('mongoose');
-
 const subscriptionSchema = new mongoose.Schema({
-  parent: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
-  child: { type: mongoose.Schema.Types.ObjectId, ref: 'Child', required: true },
-  course: { type: mongoose.Schema.Types.ObjectId, ref: 'Course', required: true },
-  timeSlotId: { type: mongoose.Schema.Types.ObjectId, required: true },
-  gateway: { type: String, enum: ['helcim', 'stripe'], required: true },
+  enrollment: { type: ObjectId, ref: 'Enrollment', required: true, unique: true },
+  parent: { type: ObjectId, ref: 'User', required: true },
+  gateway: { type: String, enum: ['helcim', 'stripe'], required: true }, // per Decision D-1
   gatewayCustomerId: { type: String, required: true },
-  gatewaySubscriptionId: { type: String },
-  gatewayCardToken: { type: String, required: true },
-  startDate: { type: Date, required: true }, // Selected via Weekday Date Picker
-  billingAnchorDay: { type: Number, required: true }, // e.g. 14th of every month
-  nextBillingDate: { type: Date, required: true },
-  monthlyAmount: { type: Number, required: true },
-  status: { 
-    type: String, 
-    enum: ['active', 'past_due', 'cancellation_pending', 'cancelled'], 
-    default: 'active' 
-  },
-  // 4-WEEK CANCELLATION RULE ENFORCEMENT
+  gatewayCardToken: { type: String, required: true },          // processor token, never card data
+  monthlyAmount: { type: Number, required: true },             // cents
+  billingAnchorDay: { type: Number, required: true, min: 1, max: 31 }, // day of month from startDate
+  nextBillingDate: { type: String, default: null, index: true },       // "YYYY-MM-DD"; null = no more charges
+  status: { type: String, enum: ['active', 'cancellation_pending', 'ended'], default: 'active' },
+  pastDue: { type: Boolean, default: false },                  // separate from status so a failed charge
+                                                               // never loses the cancellation state
+  // 4-week rule
   cancellationRequestedAt: { type: Date },
-  cancellationEffectiveDate: { type: Date },
-  finalBillingDate: { type: Date },
-  cancellationNoticeDays: { type: Number }, // Days difference between request and nextBillingDate
-  cancellationReason: { type: String }
+  cancellationCase: { type: String, enum: ['A', 'B'] },
+  cancellationNoticeDays: { type: Number },
+  finalBillingDate: { type: String, default: null },           // Case B: the one remaining charge date
+  serviceEndDate: { type: String }
 }, { timestamps: true });
-
-module.exports = mongoose.model('Subscription', subscriptionSchema);
 ```
 
-### 4.3 Camp Themes & Printable Attendance Schema (`models/Camp.js`)
-*Supports dynamic theme management and attendance sheets with signature capture.*
+```javascript
+// models/Charge.js — one document per subscription per billing date
+const chargeSchema = new mongoose.Schema({
+  subscription: { type: ObjectId, ref: 'Subscription', required: true },
+  cycleDate: { type: String, required: true },                 // the billing date being charged
+  amount: { type: Number, required: true },
+  status: { type: String, enum: ['processing', 'paid', 'failed', 'abandoned'], required: true },
+  attempts: { type: Number, default: 0 },
+  nextRetryAt: { type: String },
+  gatewayTransactionId: { type: String }
+}, { timestamps: true });
+
+// The guarantee against double charging: a cycle can only be claimed once.
+chargeSchema.index({ subscription: 1, cycleDate: 1 }, { unique: true });
+```
+
+**Date helpers and the 4-week rule:**
+
+```javascript
+// services/billingDates.js
+const { DateTime } = require('luxon');
+const TZ = 'America/Toronto';
+
+function todayInToronto() {
+  return DateTime.now().setZone(TZ).toISODate();
+}
+
+function addDays(isoDate, days) {
+  return DateTime.fromISO(isoDate, { zone: TZ }).plus({ days }).toISODate();
+}
+
+// Next monthly billing date, clamped for short months: anchor 31 → Feb 28 → Mar 31.
+function nextAnchorDate(isoDate, anchorDay) {
+  const nextMonth = DateTime.fromISO(isoDate, { zone: TZ }).startOf('month').plus({ months: 1 });
+  return nextMonth.set({ day: Math.min(anchorDay, nextMonth.daysInMonth) }).toISODate();
+}
+
+// Brief §5: cancel ≥ 4 weeks before the next billing date, otherwise the upcoming month is still charged.
+function calculateCancellation(sub, requestDate) {
+  const R = DateTime.fromISO(requestDate, { zone: TZ });
+  const N = DateTime.fromISO(sub.nextBillingDate, { zone: TZ });
+  const noticeDays = Math.round(N.diff(R, 'days').days); // round: DST days are 23/25 hours
+
+  if (noticeDays >= 28) {
+    return {
+      cancellationCase: 'A',
+      noticeDays,
+      nextBillingDate: null,          // no further charges
+      finalBillingDate: null,
+      serviceEndDate: N.minus({ days: 1 }).toISODate()
+    };
+  }
+  const following = nextAnchorDate(sub.nextBillingDate, sub.billingAnchorDay);
+  return {
+    cancellationCase: 'B',
+    noticeDays,
+    nextBillingDate: sub.nextBillingDate, // one more charge on N
+    finalBillingDate: sub.nextBillingDate,
+    serviceEndDate: DateTime.fromISO(following, { zone: TZ }).minus({ days: 1 }).toISODate()
+  };
+}
+
+module.exports = { TZ, todayInToronto, addDays, nextAnchorDate, calculateCancellation };
+```
+
+The parent portal shows the result of `calculateCancellation()` **before** the parent confirms; on confirmation the same values are saved and the status becomes `cancellation_pending`.
+
+### 4.6 Camps & Camp Registrations (Brief §3)
 
 ```javascript
 // models/Camp.js
-const mongoose = require('mongoose');
-
 const campThemeSchema = new mongoose.Schema({
-  name: { type: String, required: true }, // e.g. "Battle Bots Arena", "Space Exploration"
+  name: { type: String, required: true },          // staff-editable (Brief §3)
   description: { type: String },
-  targetAges: [{ type: String }]
+  ageGroups: [{ type: String }],                   // e.g. "Ages 6-8"
+  sortOrder: { type: Number, default: 0 },
+  isActive: { type: Boolean, default: true }       // retire instead of delete, keeps history intact
 });
 
 const campSchema = new mongoose.Schema({
-  title: { type: String, required: true }, // "March Break Camp 2027", "PD Day Camp"
-  campType: { 
-    type: String, 
-    enum: ['pd_day', 'winter_break', 'march_break', 'summer_camp'], 
-    required: true 
-  },
-  seasonYear: { type: Number, required: true },
-  themes: [campThemeSchema], // Staff can add/rename themes in CMS
-  dates: [{ type: Date, required: true }],
-  careOptions: [{
-    name: { type: String }, // "Before Care (8:00 - 9:00 AM)"
-    fee: { type: Number, default: 0 }
-  }]
+  name: { type: String, required: true },          // "March Break Camp 2027" — camps are records, not hard-coded types
+  campKind: { type: String, required: true },      // "PD Day" | "Winter" | "March Break" (staff-managed list)
+  course: { type: ObjectId, ref: 'Course' },       // the product parents buy
+  dates: [{ type: String, required: true }],       // "2027-03-15", ...
+  themes: [campThemeSchema],
+  careOptions: [{ name: String, fee: Number }],    // before/after care, cents
+  isActive: { type: Boolean, default: true }
 }, { timestamps: true });
 
-module.exports = mongoose.model('Camp', campSchema);
+// models/CampRegistration.js
+const campRegistrationSchema = new mongoose.Schema({
+  order: { type: ObjectId, ref: 'Order', required: true },
+  camp: { type: ObjectId, ref: 'Camp', required: true, index: true },
+  child: { type: ObjectId, ref: 'Child', required: true },
+  parent: { type: ObjectId, ref: 'User', required: true },
+  themeId: { type: ObjectId, required: true },     // _id of the theme subdocument
+  dates: [{ type: String, required: true }],       // days attended (one PD day, or a full week)
+  ageAtCamp: { type: Number, required: true },
+  careOptions: [{ type: String }],
+  status: { type: String, enum: ['active', 'cancelled'], default: 'active' }
+}, { timestamps: true });
+campRegistrationSchema.index({ camp: 1, dates: 1, themeId: 1 }); // attendance sheet queries
 ```
 
-### 4.4 Medical Release & Emergency Info Schema (`models/MedicalForm.js`)
-*Stores all 16 verified fields with field-level encryption for child data protection.*
+Attendance sheets (Brief §3) query `CampRegistration` by camp + date (or week's dates) + theme + age group and join the parent's phone and email.
+
+### 4.7 Medical Form (Brief §4)
 
 ```javascript
 // models/MedicalForm.js
-const mongoose = require('mongoose');
+const requiredWhenComplete = function () { return this.status === 'complete'; };
 
 const medicalFormSchema = new mongoose.Schema({
-  child: { type: mongoose.Schema.Types.ObjectId, ref: 'Child', required: true, unique: true },
-  parent: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
-  formToken: { type: String, required: true, unique: true }, // Direct access secure token
-  status: { type: String, enum: ['pending', 'complete'], default: 'pending' },
-  submittedAt: { type: Date },
-  
-  // 16 Verified Form Fields
-  camperFirstName: { type: String, required: true },
-  camperLastName: { type: String, required: true },
-  residentialAddress: { type: String, required: true },
-  guardianFullName: { type: String, required: true },
-  guardianEmail: { type: String, required: true },
-  guardianHomePhone: { type: String },
-  guardianCellPhone: { type: String, required: true },
-  emergencyContactName: { type: String, required: true },
-  emergencyContactPhone: { type: String, required: true },
-  hasMedicalConditions: { type: Boolean, default: false },
-  medicalConditionsDetails: { type: String },
-  allergiesDetails: { type: String }, // Anaphylaxis / EpiPen alerts
-  specialNeedsDetails: { type: String },
-  instructorGuidanceNotes: { type: String },
-  additionalNotes: { type: String },
-  outdoorProgramConsent: { type: Boolean, required: true }, // 40-min daily off-premise park
-  photoVideoReleaseConsent: { type: Boolean, required: true }
-}, { timestamps: true });
+  child: { type: ObjectId, ref: 'Child', required: true, unique: true }, // one form per child (sent once)
+  parent: { type: ObjectId, ref: 'User', required: true },
+  status: { type: String, enum: ['pending', 'complete'], default: 'pending', index: true },
+  tokenHash: { type: String, required: true, unique: true },   // SHA-256 of the emailed token
+  tokenExpiresAt: { type: Date, required: true },
+  sentAt: { type: Date }, submittedAt: { type: Date },
 
-module.exports = mongoose.model('MedicalForm', medicalFormSchema);
+  // The 16 live-form fields (Phase 01 §6.7). Required only once the parent submits,
+  // so the pending record can be created at enrolment time.
+  camperFirstName: { type: String, required: requiredWhenComplete },
+  camperLastName: { type: String, required: requiredWhenComplete },
+  address: { type: String, required: requiredWhenComplete },             // encrypted (CSFLE)
+  guardianFullName: { type: String, required: requiredWhenComplete },
+  guardianEmail: { type: String, required: requiredWhenComplete },
+  guardianHomePhone: { type: String },
+  guardianCellPhone: { type: String, required: requiredWhenComplete },
+  emergencyContactName: { type: String, required: requiredWhenComplete }, // encrypted
+  emergencyContactPhone: { type: String, required: requiredWhenComplete }, // encrypted
+  hasMedicalConditions: { type: Boolean, required: requiredWhenComplete },
+  medicalConditionsDetails: { type: String },                            // encrypted [Proposed field]
+  allergies: { type: String },                                           // encrypted
+  specialNeeds: { type: String },                                        // encrypted
+  instructorAssistanceInfo: { type: String },                            // encrypted
+  additionalDetails: { type: String },                                   // encrypted
+  outdoorProgramConsent: { type: Boolean, required: requiredWhenComplete },
+  imageVideoReleaseConsent: { type: Boolean, required: requiredWhenComplete }
+}, { timestamps: true });
 ```
 
-### 4.5 Gallery Collection (`models/GalleryItem.js`)
-*Enforces chronological ascending date display.*
+Fields marked "encrypted" are listed in the CSFLE schema map; Mongoose sees them as normal strings because the MongoDB driver encrypts and decrypts transparently. Completion status, child and parent stay unencrypted so rosters can filter on them.
+
+### 4.8 Gallery (Brief §8)
 
 ```javascript
 // models/GalleryItem.js
-const mongoose = require('mongoose');
-
 const galleryItemSchema = new mongoose.Schema({
   title: { type: String, required: true },
-  entryDate: { type: Date, required: true }, // CLIENT RULE: Display in ASCENDING date order
+  entryDate: { type: String, required: true },     // "2026-07-22" — Brief §8: display ascending by date
   mediaType: { type: String, enum: ['image', 'video'], required: true },
-  mediaUrl: { type: String, required: true },
-  thumbnailUrl: { type: String },
-  category: { type: String, required: true },
-  caption: { type: String }
+  cloudinaryPublicId: { type: String },            // images
+  videoUrl: { type: String },                      // YouTube link
+  category: { type: String },                      // optional tag, e.g. "Camps", "Competitions"
+  caption: { type: String },
+  isPublished: { type: Boolean, default: true }
 }, { timestamps: true });
 
-// Compound index to guarantee high-performance ascending sort
-galleryItemSchema.index({ entryDate: 1 });
-
-module.exports = mongoose.model('GalleryItem', galleryItemSchema);
+galleryItemSchema.index({ mediaType: 1, entryDate: 1, createdAt: 1 });
+// GET /api/v1/gallery?type=image → find({ mediaType, isPublished: true }).sort({ entryDate: 1, createdAt: 1 })
 ```
 
 ---
 
-## 5. Pure JavaScript API Route Structure
-
-All endpoints run on Express.js with clean REST conventions:
+## 5. API Structure
 
 ```javascript
-// routes/index.js (Master Route Aggregator)
+// app.js
 const express = require('express');
-const router = express.Router();
+const app = express();
 
-// Public Visitor Endpoints
-router.use('/courses', require('./courses.routes'));
-router.use('/camps', require('./camps.routes'));
+// Webhooks are mounted BEFORE express.json(): signature checks need the exact raw body.
+app.use('/api/v1/webhooks/stripe', express.raw({ type: 'application/json' }), require('./routes/stripeWebhooks.routes'));
+app.use('/api/v1/webhooks/helcim', express.raw({ type: 'application/json' }), require('./routes/helcimWebhooks.routes'));
+
+app.use(express.json({ limit: '1mb' }));
+app.use(require('cookie-parser')());
+app.use('/api/v1', require('./routes'));
+```
+
+```javascript
+// routes/index.js
+const router = require('express').Router();
+const { requireAuth, requireRole } = require('../middleware/auth');
+
+// Public
+router.use('/courses', require('./courses.routes'));          // listing with filters, slot availability
 router.use('/filters', require('./filters.routes'));
-router.use('/gallery', require('./gallery.routes')); // GET /api/v1/gallery (sorted ASC by date)
-router.use('/checkout', require('./checkout.routes'));
-router.use('/forms/medical', require('./medicalForms.routes'));
-router.use('/newsletter', require('./newsletter.routes'));
+router.use('/camps', require('./camps.routes'));
+router.use('/gallery', require('./gallery.routes'));          // sorted ascending by entryDate
+router.use('/checkout', require('./checkout.routes'));        // reserves seats, creates orders
+router.use('/forms', require('./forms.routes'));              // form builder public links + medical form by token
+router.use('/newsletter', require('./newsletter.routes'));    // double opt-in, unsubscribe
+router.use('/auth', require('./auth.routes'));                // login, refresh, password reset
 
-// Authenticated Parent Portal Endpoints
-router.use('/portal', require('../middleware/authGuard'), require('./portal.routes'));
+// Parent portal
+router.use('/portal', requireAuth, require('./portal.routes'));
 
-// Non-Technical Admin & CMS Endpoints
-router.use('/admin', require('../middleware/authGuard'), require('../middleware/roleGuard'), require('./admin.routes'));
-
-// Payment Webhook Handlers
-router.use('/webhooks/stripe', express.raw({ type: 'application/json' }), require('./stripeWebhooks.routes'));
-router.use('/webhooks/helcim', express.json(), require('./helcimWebhooks.routes'));
+// Admin — each sub-router also checks its own roles
+router.use('/admin', requireAuth, requireRole('staff'), require('./admin.routes'));
 
 module.exports = router;
 ```
 
+Every request body is validated with Zod. Responses for a full slot use HTTP `409` with code `TIME_SLOT_FULL`.
+
 ---
 
-## 6. Background Scheduled Jobs (Pure JavaScript Node-Cron)
-
-Background operational workers are defined in JavaScript via `node-cron`:
+## 6. Background Worker
 
 ```javascript
-// jobs/scheduler.js
+// worker.js — run as exactly ONE process (PM2 fork mode, instances: 1).
+// Never start these schedules from the clustered API process.
 const cron = require('node-cron');
+const { TZ } = require('./services/billingDates');
+const jobs = require('./jobs');
+
+const run = (name, fn) => () => fn().catch(err => jobs.reportFailure(name, err));
+
+cron.schedule('0 3 * * *',   run('billing', jobs.runDailyBilling),          { timezone: TZ });
+cron.schedule('0 4 * * *',   run('billingRetries', jobs.retryFailedCharges), { timezone: TZ });
+cron.schedule('30 3 * * *',  run('endEnrolments', jobs.endFinishedEnrolments), { timezone: TZ });
+cron.schedule('*/5 * * * *', run('expireHolds', jobs.releaseExpiredHolds),  { timezone: TZ });
+cron.schedule('0 9 * * *',   run('medicalReminders', jobs.sendMedicalFormReminders), { timezone: TZ });
+cron.schedule('0 2 * * *',   run('seatReconcile', jobs.reconcileSeatCounts), { timezone: TZ });
+```
+
+```javascript
+// jobs/billing.js
 const Subscription = require('../models/Subscription');
-const MedicalForm = require('../models/MedicalForm');
-const { processHelcimRecurringCharge } = require('../services/helcimService');
-const { sendMedicalReminderEmail, sendMedicalReminderSMS } = require('../services/communicationService');
+const Charge = require('../models/Charge');
+const gateway = require('../services/paymentGateway');      // Helcim/Stripe adapter per Decision D-1
+const notify = require('../services/notificationService');
+const { todayInToronto, addDays, nextAnchorDate } = require('../services/billingDates');
 
-// 1. Daily Recurring Subscription Billing (Runs at 03:00 AM EST every morning)
-cron.schedule('0 3 * * *', async () => {
-  const today = new Date();
-  today.setHours(23, 59, 59, 999);
+async function runDailyBilling() {
+  const today = todayInToronto();
 
-  const dueSubscriptions = await Subscription.find({
-    status: 'active',
-    nextBillingDate: { $lte: today }
+  // Includes cancellation_pending: Case B subscriptions still owe one final charge.
+  const due = await Subscription.find({
+    status: { $in: ['active', 'cancellation_pending'] },
+    nextBillingDate: { $ne: null, $lte: today }               // "YYYY-MM-DD" strings compare correctly
   });
 
-  for (const sub of dueSubscriptions) {
-    await processHelcimRecurringCharge(sub);
-  }
-});
+  for (const sub of due) {
+    const cycleDate = sub.nextBillingDate;
 
-// 2. Automated Medical Form Completion Reminder (Runs daily at 09:00 AM EST)
-cron.schedule('0 9 * * *', async () => {
-  // Query pending forms for programs starting in the next 7 days
-  const pendingForms = await MedicalForm.find({ status: 'pending' }).populate('child parent');
-  for (const form of pendingForms) {
-    await sendMedicalReminderEmail(form);
-    if (form.guardianCellPhone) {
-      await sendMedicalReminderSMS(form);
+    // 1. Claim the cycle. The unique index makes a second run (or a second worker) skip it.
+    let charge;
+    try {
+      charge = await Charge.create({ subscription: sub._id, cycleDate, amount: sub.monthlyAmount, status: 'processing', attempts: 1 });
+    } catch (err) {
+      if (err.code === 11000) continue;                       // already claimed
+      throw err;
+    }
+
+    // 2. Charge the saved card. The charge id is sent as the idempotency key where the gateway supports one.
+    const result = await gateway.chargeSavedCard(sub, { amount: sub.monthlyAmount, idempotencyKey: String(charge._id) });
+
+    if (result.approved) {
+      await onChargeApproved(sub, charge, result);
+    } else {
+      charge.status = 'failed';
+      charge.nextRetryAt = addDays(today, 3);                 // retry policy: +3 days, then +7 days, then abandon
+      await charge.save();
+      sub.pastDue = true;
+      await sub.save();
+      await notify.paymentFailed(sub, charge);                // parent email/SMS + staff dashboard alert
     }
   }
-});
-```
-
----
-
-## 7. Master Pure JavaScript `package.json`
-
-The root and backend service dependencies are consolidated:
-
-```json
-{
-  "name": "stemotics-platform-backend",
-  "version": "2.0.0",
-  "description": "STEMOTICS Website & CMS Platform - Full JavaScript MERN Stack",
-  "main": "server.js",
-  "scripts": {
-    "start": "node server.js",
-    "dev": "nodemon server.js",
-    "test": "jest --runInBand"
-  },
-  "dependencies": {
-    "bcryptjs": "^2.4.3",
-    "cloudinary": "^2.5.1",
-    "cors": "^2.8.5",
-    "dotenv": "^16.4.5",
-    "express": "^4.21.1",
-    "express-rate-limit": "^7.4.1",
-    "helmet": "^8.0.0",
-    "isomorphic-dompurify": "^2.16.0",
-    "jsonwebtoken": "^9.0.2",
-    "mongoose": "^8.8.0",
-    "node-cron": "^3.0.3",
-    "nodemailer": "^6.9.16",
-    "puppeteer": "^23.8.0",
-    "stripe": "^17.3.1",
-    "twilio": "^5.3.6",
-    "zod": "^3.23.8"
-  },
-  "devDependencies": {
-    "jest": "^29.7.0",
-    "nodemon": "^3.1.7",
-    "supertest": "^7.0.0"
-  }
 }
+
+async function onChargeApproved(sub, charge, result) {
+  charge.status = 'paid';
+  charge.gatewayTransactionId = result.transactionId;
+  await charge.save();
+
+  const isFinalCharge = sub.finalBillingDate && charge.cycleDate === sub.finalBillingDate;
+  sub.nextBillingDate = isFinalCharge ? null : nextAnchorDate(charge.cycleDate, sub.billingAnchorDay);
+  sub.pastDue = false;
+  await sub.save();
+  await notify.paymentReceipt(sub, charge);
+}
+
+module.exports = { runDailyBilling, onChargeApproved };
 ```
+
+`retryFailedCharges` picks `failed` charges whose `nextRetryAt` has arrived, claims each with `findOneAndUpdate({ _id, status: 'failed' }, { status: 'processing', $inc: { attempts: 1 } })`, and calls `onChargeApproved` on success. What happens to the enrolment and seat after the last failed retry is a client decision.
+
+**Other jobs:**
+- `releaseExpiredHolds`: `held` enrolments past `holdExpiresAt` → `expired`, release seat (see §4.2).
+- `endFinishedEnrolments`: subscriptions/enrolments whose `serviceEndDate` < today → `ended`, release seat.
+- `sendMedicalFormReminders`: **only** pending forms whose child's first class/camp day is in 3 days, and only once per form — not every pending form every day. Uses the parent's account email/phone (the form's own contact fields are empty until it is submitted).
+- `reconcileSeatCounts`: recount `held` + `active` + `cancellation_pending` enrolments per slot and alert on mismatch.
 
 ---
 
-## 8. Verification & Acceptance Criteria
+## 7. Verification & Acceptance Criteria
 
-- [x] Pure JavaScript specified end-to-end across React.js frontend, Node/Express backend, and MongoDB ODM.
-- [x] Direct-to-Cloud upload pipeline eliminates server upload bottlenecks for large images.
-- [x] TipTap rich-text integration provides non-technical staff with an easy, break-proof editor.
-- [x] Mongoose models in pure JavaScript implement 9-student capacity limits and automated open/close states.
-- [x] Recurring subscriptions schema enforces the 4-week cancellation notice calculation in JavaScript.
-- [x] Camp themes, attendance with signature capture, and ascending-date gallery schema verified.
-- [x] Scheduled recurring billing and automated medical form reminders run via pure JavaScript `node-cron`.
+- [ ] Capacity is enforced per shared time slot; concurrent checkout test cannot overbook (Phase 10 CAP tests).
+- [ ] Seats are released exactly once on hold expiry, cancellation end or payment failure.
+- [ ] Filter groups/options are data; listing uses OR within a group and AND across groups.
+- [ ] Billing worker runs as a single process; running the billing job twice for the same day charges nobody twice.
+- [ ] Case B subscriptions are charged exactly once more and then stop.
+- [ ] Anchor days 29–31 bill correctly in short months.
+- [ ] Medical form record can be created as `pending` with empty fields; submission enforces required fields.
+- [ ] Sensitive medical fields are stored encrypted (verified by reading the raw collection without the key).
+- [ ] Webhooks verified on the raw body and processed idempotently.
+- [ ] All scheduled jobs use `America/Toronto`.

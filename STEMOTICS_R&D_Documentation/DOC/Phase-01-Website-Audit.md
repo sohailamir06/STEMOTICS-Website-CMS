@@ -2,11 +2,11 @@
 
 ## 1. Executive Summary & Audit Scope
 
-This document provides an exhaustive, section-by-section, and element-by-element audit of the reference website [STEMOTICS](https://stemotics.com/). Every page, section, text block, form, image, navigational structure, and functional feature was audited against the live site, Yoast XML sitemaps, and theme assets.
+This document is a section-by-section audit of the reference website [STEMOTICS](https://stemotics.com/). Content facts below were re-checked against the live pages on **Nov 2, 2026**. Where this document summarises rather than copies text, it says so; the **live page is the source of truth for verbatim copy during content migration**.
 
-The master scope guarantees:
-1. **Zero Content Omission:** Every piece of copy, program listing, camp theme, FAQ, policy term, and partner list from the live website is cataloged for verbatim preservation.
-2. **Reconciliation with Client Requirements:** Integrating all new requirements from the client specifications (October 27, 2026), including automated medical forms, 9-student slot limits, weekday date pickers, camp theme management, Helcim/Stripe recurring subscriptions, and custom form builders.
+Goals:
+1. **Content Inventory:** Catalogue program listings, FAQ, policy terms and partner lists so nothing is lost in migration.
+2. **Reconciliation with the Client Brief (Oct 27, 2026):** New requirements (shared time-slot capacity, medical form automation, camp themes, recurring billing, form builder) are marked as new, not as existing site content.
 3. **Identification of Broken/Deprecated Links:** Clarifying live redirects (such as `/summer-camp/` returning 404, with active camps served at `/product-category/camps/`), resolving inconsistencies, and defining the target site architecture.
 
 ---
@@ -45,12 +45,12 @@ The live site audit identified the following complete inventory of pages, catego
 
 ## 3. Product Catalog & Category Inventory
 
-The audit revealed 29 active product listings across 8 distinct product categories:
+The `/courses/` listing shows **29 products** (3 pages: 12 + 12 + 5). Categories on the live site:
 
 ### 3.1 Product Categories
 
-1. **Regular Programs** (`/product-category/regular-programs/`): Monthly recurring subscription courses for after-school and weekend learning.
-2. **Camps** (`/product-category/camps/`): Single-purchase seasonal full-day camps (PD Day, Winter Break, March Break, Summer Camp).
+1. **Regular Programs** (`/product-category/regular-programs/`): After-school and weekend courses. Currently a one-time "Monthly [4 weeks]" payment at registration with manual follow-up charges in Helcim (Brief §5); moving to automatic monthly billing.
+2. **Camps** (`/product-category/camps/`): Currently 3 camp products — PD Day, Winter Break, Cambridge March Break. **There is no Summer Camp product**, although the homepage slider still advertises one.
 3. **Competitions** (`/product-category/competitions/`): Competitive teams and training (FIRST LEGO League, World Robot Olympiad).
 4. **Schools & Workshops** (`/product-category/schools/`): On-site and in-school workshops (STEM Night, Field Trips).
 5. **Birthday Parties** (`/product-category/birthday_party/`): Specialized on-site and off-site robotics birthday parties.
@@ -60,44 +60,45 @@ The audit revealed 29 active product listings across 8 distinct product categori
 
 ### 3.2 Master Product Listing & Product Codes
 
-| Product Title | Product Code | Category | Pricing Model | Custom Options / Fields Captured on Live Site |
+Product titles are exactly as shown on `/courses/`. Codes in **bold** exist on the live site. Codes in *italics* are **[Proposed]** new SKUs for products that have none today. Listing pages show no prices; only Coding Junior's product page was checked in detail.
+
+| # | Live Product Title | Code | Category | Notes |
 |---|---|---|---|---|
-| Introduction to Artificial Intelligence | `STAI4001` | Regular Programs | Monthly Recurring Fee | Start Date Picker, Day & Time slot (Mon-Sat), Child Full Name, Age (9-12) |
-| Coding Pre-Junior | `STC1001` | Regular Programs | Monthly Recurring Fee | Start Date Picker, Day & Time slot, Child Name, Age (4-5) |
-| Coding Junior | `STC2001` | Regular Programs | Monthly Recurring Fee | Start Date Picker, Day & Time slot, Child Name, Age (6-8) |
-| Coding Senior | `STC3001` | Regular Programs | Monthly Recurring Fee | Start Date Picker, Day & Time slot, Child Name, Age (9-12) |
-| Robotics Pre-Junior | `STR1001` | Regular Programs | Monthly Recurring Fee | Start Date Picker, Day & Time slot, Child Name, Age (4-5) |
-| Robotics Junior | `STR2001` | Regular Programs | Monthly Recurring Fee | Start Date Picker, Day & Time slot, Child Name, Age (6-8) |
-| Robotics Senior | `STR3001` | Regular Programs | Monthly Recurring Fee | Start Date Picker, Day & Time slot, Child Name, Age (9-12) |
-| Digital Design Pre-Junior | `STD1001` | Regular Programs | Monthly Recurring Fee | Start Date Picker, Day & Time slot, Child Name, Age (4-5) |
-| Digital Design Junior | `STD2001` | Regular Programs | Monthly Recurring Fee | Start Date Picker, Day & Time slot, Child Name, Age (6-8) |
-| Digital Design Senior | `STD3001` | Regular Programs | Monthly Recurring Fee | Start Date Picker, Day & Time slot, Child Name, Age (9-12) |
-| Game Design Junior | `STG2001` | Regular Programs | Monthly Recurring Fee | Start Date Picker, Day & Time slot, Child Name, Age (6-8) |
-| Game Design Senior | `STG3001` | Regular Programs | Monthly Recurring Fee | Start Date Picker, Day & Time slot, Child Name, Age (9-12) |
-| Homeschool Robotics | `STH1001` | Homeschool | Monthly Recurring Fee | Daytime slot selection, Child Name, Age |
-| PD DAY Camp (2026-2027) | `CAMP-PD` | Camps | One-time per day | Date selection checkboxes (5 dates), Care options (Before/After care), Child Name, Age |
-| Winter Break Camp | `CAMP-WINT` | Camps | One-time / Weekly | Week/Day selection, Theme selection, Care options, Camper Name, Age |
-| March Break Camp (Cambridge) | `CAMP-MAR` | Camps | One-time / Weekly | Weekly registration, Theme, Extended care, Camper Name, Age |
-| FIRST LEGO League 2026-2027 | `COMP-FLL` | Competitions | Registration + Monthly | Season session, Timing (Sat morning/afternoon), Child Full Name, Age (9-14) |
-| World Robot Olympiad (WRO) | `COMP-WRO` | Competitions | Season Fee | Category/Team selection, Child Name, Age |
-| STEM Night at School | `SCH-STEM` | Schools | Fixed package | Options A, B, C; Workshop module selections, School name, Dates |
-| Field Trip to STEMOTICS | `SCH-TRIP` | Schools | Group Fee | Grade group, Student headcount, Preferred dates |
-| BIRTHDAY PARTY (On-site) | `BTH-ONSITE` | Birthday Party | Package Base + Extras | Date, Time slot, Child Name, Age, Participant count |
-| BIRTHDAY PARTY – Offsite | `BTH-OFFSITE` | Birthday Party | Package Base + Travel | Location address, Date, Time slot, Child Name, Headcount |
-| Introductory Workshop | `INTRO-WS` | Introductory | Flat trial fee ($24.99) | Workshop date, Time, Child Name, Age |
-| Free Trial Classes | `TRIAL-FREE` | Introductory | Free ($0.00) | Date, Time, Child Name, Age, Parent phone |
-| Cambridge City Program | `CITY-CAM` | Off-site Locations | Per term / session | Community centre location, Schedule, Age group |
-| Kitchener City Program | `CITY-KIT` | Off-site Locations | Per term / session | Community centre location, Schedule, Age group |
-| Waterloo City Program | `CITY-WAT` | Off-site Locations | Per term / session | Community centre location, Schedule, Age group |
-| Guelph City Program | `CITY-GUE` | Off-site Locations | Per term / session | Community centre location, Schedule, Age group |
-| London City Program | `CITY-LON` | Off-site Locations | Per term / session | Community centre location, Schedule, Age group |
-| Woodstock City Program | `CITY-WOO` | Off-site Locations | Per term / session | Community centre location, Schedule, Age group |
+| 1 | Introduction to Artificial Intelligence [STAI4001] | **STAI4001** | Regular Programs | |
+| 2 | Coding Pre-Junior [STC1001] | **STC1001** | Regular Programs | |
+| 3 | Coding Junior [STC2001] | **STC2001** | Regular Programs | Verified: **$129.99 "Monthly [4 weeks]"**, 12 weeks per level, 1 hour/week, ages 6–8. Fields: Select Starting Date, Day & Time (Mon–Fri 5–8 PM and Sat 10 AM–3 PM in 1-hour slots), Child's Full Name, Age, **Course Selection: Level 1–4 (`STC2001`–`STC2004`)**, Quantity. States a 1:3 instructor ratio. |
+| 4 | Coding Senior [STC3001] | **STC3001** | Regular Programs | |
+| 5 | Robotics Pre-Junior [STR1001] | **STR1001** | Regular Programs | |
+| 6 | Robotics Junior [STR2001] | **STR2001** | Regular Programs | |
+| 7 | Robotics Senior [STR3001] | **STR3001** | Regular Programs | |
+| 8 | Digital Design Pre Junior [STD1001] | **STD1001** | Regular Programs | |
+| 9 | Digital Design Junior [STD2001] | **STD2001** | Regular Programs | |
+| 10 | Digital Design Senior [STD3001] | **STD3001** | Regular Programs | |
+| 11 | Game Design Junior [STG2001] | **STG2001** | Regular Programs | |
+| 12 | Game Design Senior [STG3001] | **STG3001** | Regular Programs | |
+| 13 | Free Trial Classes – [Robotics & Coding Workshop] | *TRIAL* | Regular Programs / Introductory | FAQ states trial sessions cost **$24.99**, credited against the 8-week program ($199.99 − $24.99). Pricing to be confirmed with client. |
+| 14 | Homeschool Robotics & Coding Programs | *HOME* | Home School | |
+| 15 | PD DAY Camp [2026-2027] | *CAMP-PD* | Camps | |
+| 16 | Winter Break Camp [2026-2027] | *CAMP-WIN* | Camps | |
+| 17 | Cambridge – March Break Camp [2027] | *CAMP-MAR* | Camps | |
+| 18 | FIRST LEGO League 2026-2027 | *COMP-FLL* | Competitions | |
+| 19 | World Robotics Olympiad | *COMP-WRO* | Competitions | |
+| 20 | STEM Night | *SCH-STEM* | Schools | |
+| 21 | Field Trip to STEMOTICS | *SCH-TRIP* | Schools | |
+| 22 | BIRTHDAY PARTY | *BTH-ON* | Birthday Party | |
+| 23 | BIRTHDAY PARTY – Offsite | *BTH-OFF* | Birthday Party | |
+| 24–29 | Cambridge · Guelph · Kitchener · London · Waterloo · Woodstock | *CITY-xxx* | City Programs | Product titles are just the city name. |
+
+**Important for the data model:**
+- Regular programs have **levels with their own sub-codes** (e.g. Coding Junior Level 1–4 = `STC2001`–`STC2004`). The new Course model must support levels.
+- The same weekday/time slots (e.g. Monday 5–6 PM) are offered by many programs. Brief §1 requires capacity to be counted **per slot across all programs** — see [Phase 04 §2](Phase-04-Course-Camp-Management.md).
+- Option details for products other than Coding Junior (care options, camp dates, party packages, etc.) must be captured from each product page during content migration; they were not verified for this audit.
 
 ---
 
 ## 4. Section-by-Section Homepage Content Inventory
 
-The reference homepage (`https://stemotics.com/`) contains 21 distinct structural sections:
+The reference homepage (`https://stemotics.com/`) has roughly 20 headings, grouped below into header, slider, content sections and footer. Sections 9 and 11 do **not** exist on the live site; they are new requirements from Brief §7.
 
 ### Section 1: Utility Top Bar & Header Navigation
 - **Contact Info:** Call Us: `+1 519-957-1073` | Email: `info@stemotics.com`
@@ -114,7 +115,10 @@ The reference homepage (`https://stemotics.com/`) contains 21 distinct structura
   - Learning Portal (`https://learn.stemotics.com/`)
 - **Cart Widget:** Header cart icon displaying live count with flyout modal / drawer.
 
-### Section 2: Hero Slider (5 Rotational Slides)
+### Section 2: Hero Slider (5 Real Slides + 3 Placeholders)
+
+> The live slider also contains **3 unfinished placeholder slides** ("Slide 1/2/3 Heading", "Lorem ipsum dolor sit amet…", "Click Here"). **Do not migrate them.** This is an example of the "hard to update" slider pain point in Brief §7.
+
 1. **Slide 1 — Brand Mission:**
    - Heading: `Excite | Inspire | Motivate Learning`
    - CTA Button: `Join Now` -> `https://stemotics.com/courses/`
@@ -166,21 +170,16 @@ The reference homepage (`https://stemotics.com/`) contains 21 distinct structura
 - **Badge:** `EXCELLENT` Google Reviews Rating badge (via Trustindex).
 - **Verified Reviews:** Verbatim parent reviews regarding summer camps, LEGO coding, instructor patience, and child excitement.
 
-### Section 9: Client Updated Requirement — Homepage Metric Counters
-*(From Client Requirements Summary Section 2.F)*
-Staff can edit and display live numerical counters:
-1. **Children Benefited Count:** `5,000+`
-2. **Schools Served:** `20+` (referencing Waterloo, Cambridge, Kitchener, Mississauga schools)
-3. **Community Centres Partnered:** `35+`
-4. **Certified Teachers / Instructors:** `15+`
+### Section 9: NEW (Brief §7) — Impact Section
+*Not on the live site.* Brief §7 asks the homepage to show a running count of children benefited, schools served, community centres, and teachers & staff (photos and details). **No figures are given in the brief** — real values are pending [Decision D-5](README.md#5-pending-decisions). The live homepage body text mentions "a maximum of 8 students per instructor" and the partner page names 19 schools and ~35 community centres; these are possible sources but must be confirmed by STEMOTICS.
 
 ### Section 10: Call to Action — Real-World Problem Solving
 - **H2:** `Equip Yourself With The Skills And Knowledge`
 - **Subtext:** `To design and program robots that can tackle real-world challenges.`
 - **CTA:** `Join Us At STEMOTICS Today` -> `/courses/`
 
-### Section 11: Client Updated Requirement — Newsletter Signup Block
-*(From Client Requirements Summary Section 2.F)*
+### Section 11: NEW (Brief §7) — Newsletter Signup Block
+*Not on the live site.*
 - Interactive newsletter and promotional subscription form.
 - Includes direct link to the LMS portal (`https://learn.stemotics.com/`).
 
@@ -200,8 +199,10 @@ Staff can edit and display live numerical counters:
 - **Column 4 — Quick Access & Contact Details:**
   - Quick Links: FAQ, Summer Camp, Video Gallery, Image Gallery, About Us, School-Library-Community Center
   - Address: `695 Bishop Street North, Cambridge, Ontario, N3H 2K8`
-  - Copyright: `© Copyright 2026 STEMOTICS. All Rights Reserved.`
-  - Social Links: Facebook (`stemoticscanada`), Twitter (`@stemotics`), LinkedIn (`stemotics`)
+  - Copyright notice (make the year dynamic in the new build)
+  - Social Links: Facebook (`https://www.facebook.com/stemoticscanada/`), Twitter (`https://twitter.com/stemotics`), LinkedIn (`https://www.linkedin.com/in/stemotics`)
+
+> **Class-size wording conflicts on the live site:** the homepage says "maximum of 8 students per instructor", product pages say "1:3" instructor ratio, and the FAQ says "Up to 10 children in a classroom". The new rule (Brief §1) is a **default of 9 children per time slot**. Staff should align this copy during content migration.
 
 ---
 
@@ -248,11 +249,13 @@ graph LR
 
 ## 6. Static Pages Verbatim Content Inventory
 
-### 6.1 About Us (`/about-us/`)
-- **Mission:** Providing children with the right skills to expedite learning in STEM fields and express creativity.
-- **Main Goal & Idea:** Safe, fun, and interactive hands-on training using LEGO Mindstorms, WeDo, Spike Prime, Sphero, and Arduino.
-- **Vision:** Inspiring future generations of Canadian innovators and engineers through practical team experimentation.
-- **Services:** After-school classes, weekend workshops, PD day camps, summer camps, school field trips, and TOT (Training of Trainers) for educators.
+### 6.1 About Us (`/about-us/`) — summary; copy verbatim from the live page
+- **Mission:** To "excite, inspire, and motivate young people" about robotics and hands-on exploration.
+- **Vision:** A culture "where young people dream of becoming science and technology leaders".
+- **Goals / values:** Same lists as the footer "Develop Your Skills" and "Robotic Values" columns.
+- **Hardware named:** LEGO Mindstorms EV3 and LEGO WeDo (plus unnamed "mobile educational robots"). Sphero and Arduino appear on the homepage, not here.
+- **Services:** Robotics programs for children and youth; Training of Trainers (TOT) and consultancy for schools; teacher seminars on EV3/WeDo; competition coaching (FIRST LEGO League, World Robotics Olympiad, WorldSkills).
+- **No team/instructor directory and no statistics** on the live page. Teachers & staff profiles are a new requirement (Brief §7).
 
 ### 6.2 Contact Us (`/contact-us/`)
 - **Physical Address:** `695 Bishop Street North, Unit #4, 2nd Floor, Cambridge, ON – N3H 2K8`
@@ -260,7 +263,10 @@ graph LR
 - **Email:** `info@stemotics.com`
 - **Form Fields:** Name (Required), Phone (Required), Email (Required), Message (Optional), Google reCAPTCHA v3.
 
-### 6.3 FAQ (`/faq/`) — All 15 Verified Questions & Answers
+### 6.3 FAQ (`/faq/`) — 15 Questions
+
+Questions are exact. Several answers below are **abridged** (Q3, Q4, Q9, Q11, Q13 have extra sentences on the live page); copy the full text from the live page during migration.
+
 1. **Q: What is the logic in having a 2nd grader sit in the same class as a 1st grader?**  
    *A:* In the course of STEMOTICS enrichment programs, children are exposed to educational materials they do not usually have access to in school at their age. The models come with parts that enable every child to build and invent according to their passions and ability.
 2. **Q: Aren’t the lessons too long? Don’t the children lose interest?**  
@@ -280,7 +286,8 @@ graph LR
 9. **Q: Can I sit with my child during class?**  
    *A:* Staying with your child is not recommended. The goal of the program is for the children to manage by themselves, and try to deal with different tasks without parental dependency.
 10. **Q: How big are your groups?**  
-    *A:* Up to 10 children in a classroom (Client updated rule: Default capacity is 9 children per slot; staff can edit it).
+    *A:* Up to 10 children in a classroom.  
+    *(Migration note, not site copy: conflicts with the new default of 9 per time slot — staff to update.)*
 11. **Q: Does each child receive a kit?**  
     *A:* Each child or pair receives a kit, depending on the type and complexity of the model constructed.
 12. **Q: Who are the instructors?**  
@@ -292,56 +299,64 @@ graph LR
 15. **Q: Is it possible to buy the enrichment programs kit?**  
     *A:* The kit itself is manufactured by LEGO® and other manufacturers. The kits can be purchased through their online stores.
 
-### 6.4 Cancellation & Refund Policy (`/cancellation-refund-policy/`)
-- **On-site Services:** Notice must be received three (3) full working days prior to camp commencement.
-  - Requested >2 weeks before start date: 100% refund minus $35 admin fee.
-  - Requested within 2 weeks of start date: 50% refund minus $35 admin fee.
-  - Requested <3 working days: Non-refundable.
-  - Inclement weather (PD Day Camps): 100% refund, no administration fee.
-- **Competitive Robotics Teams (FLL/WRO):** Registration fees are strictly non-refundable.
-- **Off-site Services:** 25% non-refundable deposit required.
-- **Client Updated Recurring Subscriptions Cancellation Rule:**  
-  *Cancellation of Regular Program subscriptions must be requested at least 4 weeks before the next recurring billing date. The parent portal and checkout must clearly display and enforce this 4-week rule.*
+### 6.4 Cancellation & Refund Policy (`/cancellation-refund-policy/`) — summary; copy verbatim from the live page
+- **PD Day Camp weather cancellation:** 100% refund, no administration fee.
+- **On-site programs:** Cancellation must reach the Registration Office at least three full working days before the camp starts (email, phone, fax, mail or in person).
+  - Two or more weeks before start: registration fee refunded minus a $35 administration fee.
+  - Within two weeks of start: 50% refunded minus a $35 administration fee.
+  - Within three full working days of start: no refund.
+  - After the program starts: not refundable, but the camper can exchange into another session, workshop or camp on a different date.
+  - Competitive robotics team registration fees: non-refundable.
+- **Off-site programs:**
+  - 25% deposit based on estimated students or the minimum of 10 campers per day, applied to the total fee after the sessions.
+  - If attendance is lower than the deposit covers, the difference is refunded.
+  - Cancellation two or more weeks before start: **full deposit refunded**. Within two weeks: **50% of the deposit refunded**.
+- **Transfers:** Written request at least three full working days before the camp starts; subject to space and fee difference.
+- **NEW (Brief §5) — Recurring Regular Program subscriptions:** The live policy has **no** recurring-billing clause. A new clause is required: a subscription must be cancelled at least 4 weeks before the next billing date, otherwise the upcoming month is still charged. Final wording pending [Decision D-9](README.md#5-pending-decisions).
 
 ### 6.5 Partner With Us (`/partner-with-us/`)
-- **Franchise Opportunity:** 12-year proven model, modest initial capital, high margins, low fixed overhead, proprietary STEMOTICS curriculum, comprehensive trainer certification, territorial exclusivity across Canadian provinces.
+- Franchise/partnership opportunity page. **Not re-checked in this audit** — capture verbatim copy from the live page during migration.
 
 ### 6.6 School, Library & Community Center Directory (`/school-library-community-center/`)
-Preserving the complete roster of institutional partners:
-- **Schools (20+):** Paris Central School, Cedar Creek Public School, Sandowne Public School, Saint Augustine Catholic School, St. Bernadette Catholic School, Linwood Public School, St. Vincent De Paul Catholic Elementary School, Edna Staebler Public School, Ayr Public School, St. Anne Catholic School, Resurrection Christian School, International School of Cambridge, MAC – Maple Grove School, Star Academy (Mississauga), St. John’s-Kilmarnock School, Central Public School, NorthStar Montessori Private School, Rockway Mennonite Collegiate, K-W Montessori School.
-- **Libraries (14+):** Guelph Public Library, IDEA EXCHANGE (Old Post Office, Clemens Mills, Hespeler), Brant Library (Burford, Paris), Region of Waterloo Library (Kitchener, St. Jacobs, Elmira), Toronto Public Library (Brentwood, Albion, Humberwood), Region of Waterloo Museum.
-- **Community Centres (35+):** Carling Heights (London), Chandler Mowat (Kitchener), Williamsburg, Kingsdale, Doon Pioneer Park, South Dumfries (St. George), Forest Heights, Stanley Park, Country Hills, Downtown Community Centre, City of Woodstock, Victoria Hills, Youth and Teen Centre (Cambridge), Branlyn (Brantford), Alison Neighbourhood, City of Waterloo Recreation, YMCA of Guelph, West End Community Centre, Preston Heights, Kiwanis Boys and Girls Club (Hamilton), Langs Community Centre, RIM Park (Waterloo), Argyle Family Centre (London).
+Partner names as listed on the live page (several lists end with "& many more"):
+- **Schools (19):** Paris Central School (Paris), Cedar Creek Public School (Ayr), Sandowne Public School (Waterloo), Saint Augustine Catholic School (Cambridge), St. Bernadette Catholic School (Kitchener), Linwood Public School (Linwood), St. Vincent De Paul Catholic Elementary School, Edna Staebler Public School, Ayr Public School (Ayr), St. Anne Catholic School (Kitchener), Resurrection Christian School, International School of Cambridge, MAC – Maple Grove School (Kitchener), Star Academy (Mississauga), St. John’s-Kilmarnock School (Breslau), Central Public School (Cambridge), NorthStar Montessori Private School, Rockway Mennonite Collegiate, K-W Montessori School.
+- **Libraries (13, incl. one museum):** Guelph Public Library; IDEA EXCHANGE (Old Post Office, Clemens Mills, Hespeler); Brant Library (Burford); County of Brant Public Library (Paris); Region of Waterloo Library (Kitchener, St. Jacobs, Elmira); Toronto Public Library (Brentwood, Albion, Humberwood); Region of Waterloo Museum (Kitchener).
+- **Community centres & partners (36 entries, ~33 unique):** Carling Heights Community Centre (London, listed twice with different spelling); Chandler Mowat, Williamsburg, Kingsdale, Doon Pioneer Park, Forest Heights, Stanley Park, Victoria Hills (listed twice), Centre Ville Chicopee (Kitchener); South Dumfries (St. George); Country Hills; Downtown Community Centre; City of Woodstock; City of Woodstock Summer Camp; Youth and Teen Centre, Alison Neighbourhood, Preston Heights, Grow Community Center, Langs / Lang's Community Centre (listed twice), Hespeler Village Neighborhood Association (Cambridge); Branlyn, Woodman Cultural Center, Back to School Carnival (Brantford); City of Waterloo Recreation Facility Services, RIM Park (Waterloo); YMCA of Guelph, West End Community Center (Guelph); Kiwanis Boys and Girls Club (Hamilton); Argyle Family Centre (London); STEM Camps (Scarborough, Vaughan Mills, Toronto); Festival of Trees, Club Scout (Kitchener); St. Teresa of Avila Church (Elmira).
+
+> Clean-up for migration: remove duplicates and decide whether events (e.g. Back to School Carnival, Festival of Trees) belong in the directory.
 
 ### 6.7 Personal Information, Medical Conditions & Photo Release Form
 Reference URL: `/personal-information-medical-conditions-photo-release-stemotics-camps/`
-The live form captures 16 specific fields which will power the new automated medical information system:
-1. Camper's First Name
-2. Camper's Last Name
-3. Full Street Address
-4. Main Parent/Guardian Full Name
-5. Parent/Guardian Email Address
-6. Parent/Guardian Home Phone
-7. Parent/Guardian Cell Phone
-8. Emergency Contact Full Name
-9. Emergency Contact Phone Number
-10. Known Medical Conditions Status (Yes / No radio)
-11. Allergies & Allergic Reactions (Text description)
-12. Special Needs & Accommodations (Text description)
-13. Child's Ability & Instructor Guidance notes
-14. Additional Details / Behavioral Notes
-15. Outdoor Program Parental Consent (Yes / No radio for 40-min off-premise park activity)
-16. Consent for Image & Video Release (Yes / No radio for marketing/social media)
+The live form has 16 fields (labels exactly as shown; no fields are marked required on the live form). This list is the **single source of truth** for the medical form in [Phase 06](Phase-06-Forms-Communication.md) and [Phase 09](Phase-09-MERN-Architecture.md):
+
+| # | Live Label | Type |
+|---|---|---|
+| 1 | Camper's First Name | Text |
+| 2 | Camper's Last Name | Text |
+| 3 | Address | Text |
+| 4 | Main Parent/Guardian Full Name | Text |
+| 5 | Parent/Guardian Email Address | Email |
+| 6 | Parent/Guardian Home Phone | Phone |
+| 7 | Parent/Guardian Cell Phone | Phone |
+| 8 | Emergency Contact Name | Text |
+| 9 | Emergency Contact Phone | Phone |
+| 10 | Do you have any known medical conditions? | Radio (Yes/No) |
+| 11 | Allergies / Allergic reactions | Text |
+| 12 | Special needs | Text |
+| 13 | Please share information regarding your child's need or ability to assist our instructors | Textarea |
+| 14 | Additional details on child's need or ability | Textarea |
+| 15 | Outdoor Program Parental Consent (off-premises outdoor class, "40 min/Day 11:40 - 12:20") | Radio (Yes/No) |
+| 16 | Consent for Image/Video Release | Radio (Yes/No) |
 
 ---
 
-## 7. Audit Acceptance & Readiness Sign-Off
+## 7. Audit Acceptance Checklist
 
-- [x] Every page and URL from the live site and sitemaps has been inventoried.
-- [x] All 29 individual products across all 8 categories are cataloged.
-- [x] All 5 homepage hero slides and 21 sections are documented.
-- [x] All 5 filter taxonomies on `/courses/` are extracted.
-- [x] All 15 FAQ questions and answers are preserved verbatim.
-- [x] Cancellation policies (both legacy camp policies and new 4-week subscription rules) are detailed.
-- [x] All 16 fields of the Medical & Photo Release form are documented.
-- [x] Complete list of schools, libraries, and community centres is captured.
-- [x] Client requirements from the October 27, 2026 brief are completely reconciled.
+- [ ] Every page and URL from the live site and sitemaps inventoried (product option details still to be captured per product).
+- [ ] All 29 products catalogued with options, levels and prices from each product page.
+- [ ] Homepage slides and sections documented; placeholder slides excluded.
+- [ ] All 5 filter groups on `/courses/` extracted.
+- [ ] Full verbatim FAQ, About Us, Partner With Us and policy text exported from the live site.
+- [ ] Recurring-billing policy clause approved by STEMOTICS (D-9).
+- [ ] All 16 medical form fields documented.
+- [ ] Partner directory cleaned up and approved by STEMOTICS.

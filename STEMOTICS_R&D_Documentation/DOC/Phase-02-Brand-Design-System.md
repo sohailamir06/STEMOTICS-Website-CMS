@@ -4,7 +4,9 @@
 
 This phase establishes an industry-leading, professional, and accessible design system for the rebuilt STEMOTICS platform. The design system preserves the core visual identity of STEMOTICS—its distinctive royal blue and high-energy lime accents, clean typography, and educational credibility—while introducing modern UX improvements, micro-interactions, responsive refinements, and accessibility compliance (WCAG 2.1 AA).
 
-All brand values, color codes, and typography rules in this document have been verified from the live CSS stylesheets and rendered DOM of `https://stemotics.com/`.
+> **Verification status: NOT YET VERIFIED.** The colour and font values below came from an AI-assisted draft and have not been confirmed against the live CSS. Before design starts, a designer must confirm each value with browser DevTools on `https://stemotics.com/` (computed styles of header, buttons, headings, footer) and against the STEMOTICS logo files.
+>
+> Known problem: `#0693E3`, `#00D084` and `#FCB900` (§2.2) are **WordPress core's default block-editor palette**, which is present in every WordPress site's CSS. They are almost certainly not STEMOTICS brand colours.
 
 ---
 
@@ -28,9 +30,9 @@ All brand values, color codes, and typography rules in this document have been v
 | `--color-footer-bg`    | `#000000` | `rgb(0, 0, 0)` | Global footer canvas (solid dark identity) |
 | `--color-footer-border`| `rgba(255, 255, 255, 0.15)` | `rgba(255, 255, 255, 0.15)` | Footer column dividers and horizontal rules |
 
-### 2.2 Semantic & Educational Stream Color Accents
+### 2.2 Semantic & Educational Stream Color Accents [Proposed — replace values after verification]
 
-| Token Name | Hex Code | Purpose / Course Category Association |
+| Token Name | Hex Code (unverified) | Purpose / Course Category Association |
 |---|---|---|
 | `--color-accent-orange` | `#EF9350` | Robotics & Mechanical streams, urgent alerts, "Few Seats Left" warning |
 | `--color-accent-coral`  | `#D17474` | Camps & seasonal events, PD Day tags, cancellation notices |
@@ -42,7 +44,7 @@ All brand values, color codes, and typography rules in this document have been v
 
 ## 3. Typography Hierarchy & Font System
 
-The typography system uses Google Fonts loaded asynchronously with zero layout shift (`font-display: swap`):
+The typography system uses self-hosted or Google Fonts with `font-display: swap`. **Font families are unverified** — confirm the live site's fonts in DevTools before adopting `Inter`.
 
 ```css
 /* Core Typography Stack */
@@ -98,11 +100,11 @@ graph TD
    - *Reference Site:* Header height is 100px with a solid jump upon scrolling.
    - *Modern Improvement:* Slim 72px sticky header with subtle backdrop blur (`backdrop-filter: blur(12px)`), prominent phone/email links, quick search trigger, direct "Learning Portal" pill, and interactive cart drawer showing live cart count.
 2. **Elevated Course Cards with Real-Time Availability:**
-   - *Reference Site:* Standard WooCommerce product grid with plain text headings and basic price tags.
-   - *Modern Improvement:* Elevated modern cards with rounded-xl corners (8px default), subtle hover lift (`transform: translateY(-4px)` with gentle shadow), high-contrast category badges (e.g., "Ages 6-8", "Robotics"), and real-time slot status ("Only 2 seats left in Mon 5 PM slot!").
-3. **Interactive Weekday-Constrained Date Picker Widget:**
-   - *Reference Site:* Basic HTML dropdown or text box that allowed invalid date selections.
-   - *Modern Improvement:* Sleek calendar widget where only the matching weekdays are clickable (e.g. if the user selects Monday 5:00 PM, all Tuesdays–Sundays and holidays are automatically grayed out).
+   - *Reference Site:* Standard WooCommerce product grid with plain text headings and no prices on listing pages.
+   - *Modern Improvement:* Elevated cards with 8px corners, subtle hover lift, category badges (e.g., "Ages 6-8", "Robotics"), and time-slot status on the product page ("Mon 5 PM — 2 spots left" / "Full"). Slot status reflects the **shared slot capacity across all programs** (Brief §1).
+3. **Interactive Weekday-Constrained Date Picker Widget (Brief §12):**
+   - *Reference Site:* A "Select Starting Date" picker that does not restrict the weekday.
+   - *Modern Improvement:* After the parent picks a time slot (e.g. Monday 5:00 PM), only Mondays are clickable. Greying out studio holidays is [Proposed].
 4. **Faceted Filter Sidebar with Real-Time Instant Filtering:**
    - *Reference Site:* Multi-checkbox filter causing full page reload or sluggish AJAX re-renders.
    - *Modern Improvement:* Instant client-side state filtering with URL search params sync, active filter chips with 1-click removal, and responsive mobile sliding drawer (`Sheet` component).
@@ -117,7 +119,7 @@ graph TD
 
 ### 5.1 Buttons & Interactive Elements
 
-```tsx
+```text
 // Primary Button Token
 bg-[#00309A] hover:bg-[#002270] text-white font-semibold px-6 py-3 rounded-lg shadow-sm transition-all duration-200 active:scale-95
 
@@ -141,9 +143,9 @@ border-2 border-[#00309A] text-[#00309A] hover:bg-[#00309A] hover:text-white fon
 
 ---
 
-## 6. CMS Design System Controls for Non-Technical Users
+## 6. CMS Design System Controls for Non-Technical Users [Proposed]
 
-To fulfill the client's requirement that non-technical staff can manage website elements without developer assistance, the CMS includes a dedicated **Brand & Theme Settings Panel**:
+The brief asks for editable **content** (slides, links, text, gallery, pages), not editable **design**. A Brand & Theme Settings Panel is an optional extra; letting staff change brand colours and fonts also risks breaking contrast/accessibility. If approved, it could include:
 
 1. **Brand Colors Manager:** Ability to update primary brand color, accent color, button background, and link hover colors via color picker or hex input.
 2. **Logo & Favicon Uploader:** Manage light-mode logo, dark-mode/footer logo, mobile logo, and browser favicon.
@@ -167,9 +169,9 @@ To fulfill the client's requirement that non-technical staff can manage website 
 
 ## 8. Verification & Acceptance Criteria
 
-- [x] All brand colors match verified live website CSS hex codes.
-- [x] Primary font (`Inter`) and secondary fonts are specified.
-- [x] Unique design improvements enhance usability without altering STEMOTICS branding.
-- [x] Full UI component library tokens defined (Buttons, Badges, Modals, Forms).
-- [x] Print stylesheet specifications for rosters and camp attendance defined.
-- [x] CMS controls designed for non-technical brand and layout management.
+- [ ] Brand colours confirmed from live CSS / logo files and tokens updated.
+- [ ] Fonts confirmed from the live site.
+- [ ] Brand colour pairs pass WCAG 2.1 AA contrast (e.g. white text on lime `#D9F293` fails — lime needs dark text).
+- [ ] UI component tokens defined (Buttons, Badges, Modals, Forms).
+- [ ] Print stylesheet for time-slot rosters and camp attendance sheets defined.
+- [ ] Decision recorded on whether the Brand & Theme panel is in scope.

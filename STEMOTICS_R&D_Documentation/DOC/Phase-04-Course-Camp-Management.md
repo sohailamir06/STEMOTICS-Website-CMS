@@ -1,221 +1,209 @@
-# Phase 04 — Course, Program & Camp Management
+# Phase 04 — Course, Time Slot & Camp Management
 
 ## 1. Executive Summary & Operational Scope
 
-This phase governs the core operational engine of STEMOTICS: regular after-school and weekend programs, seasonal camps, competitions, school workshops, dynamic filter groups, capacity tracking, and printable attendance sheets.
+This phase covers the operational core of STEMOTICS: regular programs and their **shared time slots**, per-slot rosters, camps and camp themes, camp attendance sheets, camp bulk email, dynamic course filters, and the weekday-constrained start date picker.
 
-All operational rules in this document incorporate the client's specifications dated October 27, 2026, specifically the **9-child default slot limit, automatic registration open/close triggers, camp theme management, printable attendance sheets with signature columns, camp bulk email filters, and dynamic course filter groups**.
+Requirements come from the client brief (Oct 27, 2026): §1 (capacity), §2 (rosters), §3 (camps), §6 (filters) and §12 (date picker). Items not in the brief are marked **[Proposed]**.
 
 ---
 
-## 2. Regular Programs Management & 9-Child Slot Capacity
+## 2. Regular Programs — Shared Time-Slot Capacity (Brief §1)
 
-Regular programs operate on monthly recurring subscriptions with weekly time slots.
+### 2.1 The Rule
+
+> "Track enrollment count per time slot (e.g. 'Mondays 4:00–5:00 PM'), combining **ALL regular programs** that run in that slot — not just one program's own roster." — Brief §1
+
+A **time slot** is a weekday + time range at the STEMOTICS centre (e.g. Monday 5:00–6:00 PM). Many programs run in the same slot: Coding Junior, Robotics Senior and Game Design Junior may all be offered on Monday at 5 PM, in the same room with the same staff. Capacity belongs to the **slot**, not to the program.
+
+**Example:** Monday 5–6 PM has capacity 9. Five children enrol in Coding Junior and four in Robotics Senior for that slot. The slot is now full, so **every** program offered on Monday 5–6 PM shows that slot as "Full", including programs nobody from that slot has enrolled in yet.
+
+### 2.2 Capacity Behaviour
+
+- **Default capacity:** 9 children per time slot when a slot is created.
+- **Staff-editable per slot:** e.g. raise Saturday 10 AM to 11 when extra space is available. Lowering capacity below the current count is allowed; the slot simply stays full until enough children leave.
+- **Automatic close:** when occupied seats reach capacity, the slot becomes unselectable on every regular program's registration form.
+- **Automatic reopen:** when a child withdraws (enrolment ends) or staff raise capacity, the slot becomes selectable again with no manual step.
+- **Regular Programs only.** Camps do not use time-slot capacity (Brief §1). The end of that sentence in the brief is cut off — see [Decision D-3](README.md#5-pending-decisions).
+- **When a seat counts as taken:** from the moment the booking is paid until the enrolment ends (end of the final paid month after cancellation). Pending [Decision D-7](README.md#5-pending-decisions).
+- **No overbooking under concurrency:** seats are reserved with an atomic database update during checkout and held for 15 minutes while payment completes. If payment fails or times out, the hold is released. See [Phase 09 §4.2](Phase-09-MERN-Architecture.md).
+- [Proposed] **Waitlist:** "Full — join waitlist" with staff notification when a seat opens. Not in the brief.
 
 ```mermaid
 stateDiagram-v2
-    [*] --> Active_Open: Slot Created (Default Cap = 9)
-    Active_Open --> Active_Open: Student Enrolls (Count < Cap)
-    Active_Open --> Full_Closed: Student Enrolls (Count == Cap)
-    Full_Closed --> Active_Open: Admin Increases Cap OR Student Cancels / Transfers
-    Full_Closed --> [*]: Program Archived
+    [*] --> Open: Slot created (capacity = 9)
+    Open --> Open: Seat reserved/released (occupied < capacity)
+    Open --> Full: Seat reserved (occupied == capacity)
+    Full --> Open: Enrolment ends / hold expires / staff raise capacity
+    Open --> Inactive: Staff deactivate slot
+    Inactive --> Open: Staff reactivate slot
 ```
 
-### 2.1 Time Slot Capacity Engine
+### 2.3 Printable Roster per Time Slot (Brief §2)
 
-- **Default Slot Limit:** Every newly created time slot defaults to **9 children**.
-- **Admin Customization:** Staff can adjust capacity per individual time slot (e.g., set a Saturday slot to 8, or an advanced AI class to 10).
-- **Automated Open/Close Logic:**
-  - When active registrations reach the capacity limit, the slot is immediately marked **FULL** on the website frontend.
-  - The slot selection radio/button becomes disabled with a visible badge: `"Full — Join Waitlist"`.
-  - If a parent cancels or transfers to another time, or if staff increase capacity, the slot **automatically reopens** for public registration.
-- **Weekday Restriction Validation:** The system binds each slot to its designated day of the week (e.g. Monday 5:00 PM). The frontend date picker will restrict selection exclusively to Mondays.
+One printable sheet **per time slot**, listing every child expected in that slot **across all programs**.
 
-### 2.2 Printable Rosters for Regular Programs
+**Required columns (Brief §2):**
+1. Child's name
+2. Age
+3. Program enrolled in (and level, e.g. `Coding Junior — Level 2 [STC2002]`)
+4. Start date
 
-Staff can generate clean, print-optimized PDF rosters formatted for 8.5" x 11" Letter landscape.
+**Header:** slot (e.g. `Monday 5:00 PM – 6:00 PM`), date printed, seats used / capacity.
 
-**Roster Data Fields:**
-1. Program Title & Course Code (e.g., `Introduction to AI [STAI4001]`)
-2. Day & Time Slot (e.g., `Monday 5:00 PM – 6:00 PM`)
-3. Instructor Name & Classroom / Room Number
-4. Child Full Name
-5. Child Age & Date of Birth
-6. Enrollment Start Date
-7. Parent/Guardian Name & Primary Phone
-8. Medical Form Status (`Complete` / `Pending Alert`)
-9. Critical Allergies / Medical Notes Summary
+[Proposed] extra columns: parent phone, medical form status, allergy alert flag.
+
+**Format:** a print-optimised HTML page (`@media print`, Letter landscape). Staff print it from the browser with "Print" or "Save as PDF". Server-side PDF generation is only needed if rosters must be emailed automatically [Proposed].
 
 ---
 
-## 3. Camps Management & Theme Architecture
+## 3. Camps & Camp Themes (Brief §3)
 
-Camps operate as seasonal, full-day or half-day intensive workshops. The platform provides full management for:
-1. **PD Day Camp** (Single-day bookings across scheduled school board dates)
-2. **Winter Break Camp** (Daily and multi-day holiday break options)
-3. **March Break Camp** (Full week intensive robotics camp)
-4. **Summer Camp** (Weekly seasonal themes from July through August)
+### 3.1 Camps in Scope
 
-### 3.1 Dynamic Camp Themes
+The brief lists **three camps**:
+1. **PD Day Camp** — single-day bookings on school PD days.
+2. **Winter Camp** — school winter break.
+3. **March Break Camp** — the March Break week.
 
-Staff can create, edit, rename, or retire camp themes dynamically without developer assistance:
-- **Theme Name:** (e.g., "Battle Bots Arena", "Space Exploration with SPIKE Prime", "Minecraft Game Design")
-- **Description & Key Learning Outcomes:** Full syllabus and daily project highlights.
-- **Applicable Age Brackets:** (e.g. Ages 4–6, Ages 7–9, Ages 10–12).
-- **Assigned Camp Seasons:** Assign to PD Day, Winter Break, March Break, or Summer Camp.
+Summer Camp is **not** in the brief. The live homepage still has a Summer Camp slide, but there is no Summer Camp product. Adding Summer Camp later should need no code change: camps are records staff create, not hard-coded types.
 
-### 3.2 Camp Attendance Sheets & Sign-In/Sign-Out Log
+### 3.2 Camp Themes
 
-A major operational requirement from the client brief is the ability to generate printable daily attendance sheets with physical signature lines for parent drop-off and pickup.
+> "Each camp currently has 4 themes, and staff need to be able to add/edit/rename themes later without needing a developer." — Brief §3
 
-**Printable Attendance Sheet Features:**
-- **Filtering Options:** Filterable by:
-  - Camp Day / Date
-  - Camp Week
-  - Assigned Theme
-  - Age Group / Classroom
-- **Printed Table Columns:**
-  1. Student Full Name
-  2. Age
-  3. Registered Camp Theme
-  4. Parent / Guardian Name
-  5. Primary Contact Phone & Email
-  6. Emergency Contact Name & Phone
-  7. Drop-off Sign-In Time (Blank for manual entry)
-  8. Drop-off Parent Signature (Line)
-  9. Pick-up Sign-Out Time (Blank for manual entry)
-  10. Authorized Pick-up Signature (Line)
-  11. Staff Initial Check
+- Each camp holds a list of themes (4 per camp today). Staff can add, rename, edit, reorder, and retire themes.
+- Theme fields: name, description, applicable age group(s), active flag.
+- Retiring a theme hides it from new registrations but keeps it on existing registrations and past attendance sheets.
+- The real theme names are needed to seed the CMS — [Decision D-4](README.md#5-pending-decisions).
+
+### 3.3 Camp Attendance Sheets
+
+Printable sheet per camp, **filterable/grouped** by:
+- Day of camp **or** week of camp
+- Theme
+- Age group
+
+**Columns per child (Brief §3):**
+
+| # | Column | Source |
+|---|---|---|
+| 1 | Child name | Registration |
+| 2 | Age | Calculated from date of birth at the camp date (or age entered at registration) |
+| 3 | Theme | Registration |
+| 4 | Parent phone number | Parent account / order |
+| 5 | Parent email address | Parent account / order |
+| 6 | Sign-in time | Blank, filled by hand |
+| 7 | Sign-in signature | Blank line |
+| 8 | Sign-out time | Blank, filled by hand |
+| 9 | Sign-out signature | Blank line |
+
+[Proposed] extra columns: emergency contact, allergy alert flag, before/after-care.
 
 ```
-+--------------------------------------------------------------------------------------------------------------------------------------------------------------------+
-| STEMOTICS CAMP ATTENDANCE & SIGN-IN SHEET — DATE: March 16, 2027 | THEME: Robotics & AI Junior | INSTRUCTOR: ______________________                               |
-+-------------------+-----+-------------------+---------------------+------------------+------------------+---------------------+-------------------+------------+
-| Child Full Name   | Age | Theme / Level     | Parent Name         | Contact Phone    | Sign-In Time     | Parent Signature    | Sign-Out Time     | Parent Sig |
-+-------------------+-----+-------------------+---------------------+------------------+------------------+---------------------+-------------------+------------+
-| Oliver Thompson   | 7   | SPIKE Junior      | Sarah Thompson      | 519-555-0142     | _____ : _____ AM | ___________________ | _____ : _____ PM  | __________ |
-| Maya Patel        | 8   | SPIKE Junior      | Rajesh Patel        | 519-555-0189     | _____ : _____ AM | ___________________ | _____ : _____ PM  | __________ |
-+-------------------+-----+-------------------+---------------------+------------------+------------------+---------------------+-------------------+------------+
++------------------------------------------------------------------------------------------------------------------------+
+| STEMOTICS — MARCH BREAK CAMP 2027 | DAY: Tue, March 16, 2027 | THEME: <theme name> | AGES: 6-8                          |
++----------------+-----+--------------+--------------+---------------------+----------+-------------+----------+-------------+
+| Child Name     | Age | Theme        | Parent Phone | Parent Email        | In Time  | In Signature| Out Time | Out Sig.    |
++----------------+-----+--------------+--------------+---------------------+----------+-------------+----------+-------------+
+| (child name)   | 7   | (theme)      | 519-555-0142 | parent@example.com  | ___:___  | ___________ | ___:___  | ___________ |
++----------------+-----+--------------+--------------+---------------------+----------+-------------+----------+-------------+
 ```
 
-### 3.3 Bulk Email Engine for Camps
+### 3.4 Camp Bulk Email
 
-Staff can send targeted broadcast emails directly to parents registered for camps:
+Staff can email all parents registered for a given camp, optionally filtered by:
+- Theme
+- Age group
+- Date (camp day or week)
 
-- **Filter Criteria:**
-  - By Camp Event (e.g., March Break Camp 2027)
-  - By Specific Date / Week
-  - By Registered Theme
-  - By Age Group
-  - By Medical Form Completion Status (e.g., "Send only to parents with pending medical forms")
-- **Template System:**
-  - Pre-Camp Welcome & What to Bring (Lunch guidelines, indoor shoes)
-  - Emergency Weather Cancellation Notice
-  - Medical Form Completion Reminder
-  - Post-Camp Photo Gallery & Re-enrollment Offer
-- **Delivery Logging:** Real-time dashboard showing sent count, delivery status, opens, and bounce tracking.
+Requirements:
+- Recipient preview (count and list) before sending.
+- Rich-text body, optional attachment.
+- One email per parent even if they registered several children.
+- Sent through the transactional email provider; send log stored per message.
+- [Proposed] Saved templates (welcome / what to bring, weather cancellation, medical form reminder) and filter by medical-form status.
+- [Proposed] Open/bounce analytics (depends on the email provider's webhooks).
+
+Operational camp emails about a registration the parent made are transactional under CASL; they still identify STEMOTICS and include contact details. Promotional content belongs in the newsletter tool ([Phase 07 §7](Phase-07-Gallery-Content-Management.md)).
 
 ---
 
-## 4. Dynamic Course Filter System
+## 4. Dynamic Course Filters (Brief §6)
 
-The public course catalog at `/courses/` relies on a multi-attribute filter system. Staff can configure groups and options via the **Course Filters Module**:
+### 4.1 Requirement
 
-```mermaid
-graph TD
-    subgraph CMS Filter Manager
-        A[Create / Edit Filter Group]
-        B[Add / Reorder Filter Options]
-        C[Assign Options to Products]
-    end
+- Staff can **add and remove filter groups** and the **options** within each group, without a developer.
+- When creating/editing a product, staff tick the options that apply from each group.
+- The course listing shows only products matching the visitor's selected options across all groups, and stays in sync automatically.
 
-    subgraph Client-Specified Filter Groups
-        G1[1. Courses]
-        G2[2. Age Level]
-        G3[3. Course Categories]
-        G4[4. Difficulty]
-        G5[5. School Workshop Categories]
-    end
+Filters are therefore **data** (`FilterGroup` and `FilterOption` records), not hard-coded lists in the code. See [Phase 09 §4.4](Phase-09-MERN-Architecture.md).
 
-    A --> G1 & G2 & G3 & G4 & G5
-```
+### 4.2 Seed Data (current live filters, Brief §6)
 
-### 4.1 Filter Groups & Standard Options
+| Group | Options |
+|---|---|
+| Courses | AI, ML & Cyber Security · City Programs · Introductory · Regular Programs · Home School · Camps |
+| Age Level | Ages 4-5 · Ages 6-8 · Ages 9-12 · Ages 13-15 |
+| Course Categories | Robotics · Coding · Digital Design · Game Design |
+| Difficulty | Basic · Intermediate · Advanced |
+| School Workshop Categories | STEM Night at School · Bring your class to STEMOTICS |
 
-1. **Courses Group:**
-   - AI, ML & Cyber Security
-   - City Programs
-   - Introductory
-   - Regular Programs
-   - Home School
-   - Camps
-2. **Age Level Group:**
-   - Ages 4–5
-   - Ages 6–8
-   - Ages 9–12
-   - Ages 13–15
-3. **Course Categories Group:**
-   - Robotics
-   - Coding
-   - Digital Design
-   - Game Design
-4. **Difficulty Group:**
-   - Basic
-   - Intermediate
-   - Advanced
-5. **School Workshop Categories Group:**
-   - STEM Night at School
-   - Bring your class to STEMOTICS
+### 4.3 Filter Logic
 
-### 4.2 Non-Technical CMS Filter Controls
+- **Within one group:** OR (Robotics **or** Coding).
+- **Across groups:** AND (Robotics or Coding **and** Ages 6-8).
+- No selection in a group = no restriction from that group.
+- Selected filters are kept in the URL query string so filtered views can be shared and bookmarked.
+- Deleting a group or option removes it from the sidebar and from all product tags. Staff are asked to confirm and shown how many products are affected.
 
-- **Add New Filter Group:** Staff can create a new taxonomy group (e.g. "Location / City") without touching code.
-- **Add / Reorder Options:** Drag-and-drop ordering for display in the frontend sidebar.
-- **Product Tagging UI:** Multi-select checklist on each course editing screen to easily tag courses with their respective filters.
-- **Automatic Instant Filtering:** When a visitor clicks any combination of filters on the frontend, the course grid updates instantly without a full page reload.
+### 4.4 Business Type vs. Display Filters
+
+The "Courses" filter group is for **display only**. Business behaviour (does this product use time slots and monthly billing? is it a camp?) comes from a separate, fixed **product type** field on each product (`regular_program`, `camp`, `one_time`). This way staff can freely rename or delete filter options without breaking billing or capacity.
 
 ---
 
-## 5. Course Start Date Picker & Weekday Enforcement
+## 5. Start Date Picker Matches the Course Day (Brief §12)
 
-To prevent parent confusion and scheduling conflicts, the platform enforces strict weekday alignment:
+### 5.1 Rules
 
-### 5.1 Business Rules & Logic
-
-1. When editing a course, staff designate the course's operating day (e.g., "Monday").
-2. On the course product page, when a parent selects a Monday slot (e.g. "Monday – 5:00 to 6:00 PM"):
-   - The interactive calendar date picker unlocks **only future Mondays**.
-   - All Tuesdays, Wednesdays, Thursdays, Fridays, Saturdays, and Sundays are grayed out and unclickable.
-   - Statutory holidays and studio closure dates (configured by staff in CMS holiday settings) are automatically disabled.
-3. The selected start date becomes the **anchor billing date** for the student's monthly recurring subscription.
+1. On a regular program page, the parent first chooses a **time slot** (e.g. "Monday 5:00–6:00 PM"). Full slots are disabled.
+2. The date picker then enables **only that slot's weekday** (only Mondays for a Monday slot). All other weekdays are disabled.
+3. Past dates are disabled.
+4. The server re-checks the weekday on submit; the client-side picker is a convenience, not the enforcement.
+5. Weekday checks use the **`America/Toronto`** time zone, and dates are stored as calendar dates (`YYYY-MM-DD`) so they cannot shift by a day across time zones.
+6. The chosen start date is the **billing anchor** for the monthly subscription ([Phase 05 §3](Phase-05-Registration-Checkout.md)).
+7. [Proposed] Staff-managed studio closure dates (e.g. Good Friday) are also disabled. The FAQ says that when a holiday cancels a lesson, "the complete course is extended for one week". How that maps to monthly billing needs a client decision before this is built.
 
 ```mermaid
 sequenceDiagram
     autonumber
     actor Parent
     participant UI as Course Page
-    participant Picker as Date Picker Engine
-    participant CMS as Admin Rules
+    participant API as API
 
+    Parent->>UI: Opens "Coding Junior"
+    UI->>API: GET slots for course (with seats left)
+    API-->>UI: Mon 5 PM (2 left), Mon 6 PM (Full), Sat 10 AM (5 left) ...
     Parent->>UI: Selects "Monday 5:00 - 6:00 PM"
-    UI->>Picker: Pass selectedWeekday = 1 (Monday)
-    Picker->>CMS: Fetch Studio Closures & Holidays
-    CMS-->>Picker: Returns [2027-04-05 (Easter), 2027-05-24 (Victoria Day)]
-    Picker-->>UI: Render Calendar with only Mondays active (Holidays disabled)
-    Parent->>UI: Selects "Monday, April 12, 2027"
-    UI->>UI: Set Subscription Anchor Date = April 12, 2027
+    UI->>UI: Enable Mondays only, from today onward
+    Parent->>UI: Selects Monday, April 12, 2027
+    UI->>API: Add to cart (slot, startDate=2027-04-12)
+    API->>API: Verify weekday = Monday (America/Toronto) and seat available
 ```
+
+Reference dates for testing: Good Friday 2027 = March 26; Easter Monday 2027 = March 29; Victoria Day 2027 = May 24.
 
 ---
 
 ## 6. Verification & Acceptance Criteria
 
-- [x] Default capacity of 9 children per slot enforced with staff override capability.
-- [x] Automatic slot closure when capacity reached, and automatic reopening when seats free up.
-- [x] Printable PDF rosters for Regular Programs with child, parent, and medical notes.
-- [x] Full support for PD Day, Winter Break, March Break, and Summer Camps.
-- [x] Dynamic camp theme creation, renaming, and editing in CMS.
-- [x] Printable camp attendance sheets with parent sign-in and sign-out signature lines.
-- [x] Bulk camp email tool with filters by date, theme, and age group.
-- [x] Dynamic management of the 5 client-specified course filter groups.
-- [x] Weekday-constrained start date picker logic fully specified.
+- [ ] Capacity is counted per time slot across **all** regular programs; default 9, editable per slot.
+- [ ] A full slot is unselectable on every program offering it; it reopens automatically on withdrawal or capacity increase.
+- [ ] Concurrent checkouts cannot overbook a slot.
+- [ ] Printable roster per time slot shows child name, age, program, and start date across all programs.
+- [ ] 3 camps supported with staff-managed themes (add/edit/rename/retire).
+- [ ] Camp attendance sheet filters by day/week, theme and age group, and shows name, age, theme, parent phone, parent email, and sign-in/sign-out time and signature columns.
+- [ ] Camp bulk email filters by theme, age group and date.
+- [ ] Staff can add/remove filter groups and options; listing uses OR within a group and AND across groups.
+- [ ] Date picker allows only the selected slot's weekday; the server re-validates.

@@ -2,128 +2,165 @@
 
 ## 1. Executive Summary & QA Mandate
 
-This phase specifies the comprehensive quality assurance, content verification, and automated testing regimen for the rebuilt STEMOTICS platform.
+This phase defines how the rebuilt platform is verified before launch:
+1. **Content migration check:** every page and content block listed in [Phase 01](Phase-01-Website-Audit.md) exists on staging with approved wording.
+2. **Brief rule tests:** boundary tests for shared time-slot capacity (§1), rosters (§2), camps (§3), medical form (§4), billing and the 4-week rule (§5), filters (§6), gallery order (§8), accounts (§10) and the date picker (§12).
+3. **Payments, security, accessibility and cross-device checks.**
 
-The testing strategy guarantees:
-1. **100% Content & Feature Preservation:** Verifying that zero pages, sections, copy blocks, FAQ answers, or policy statements from the reference website were omitted or altered.
-2. **Client Operational Rule Enforcement:** Rigorous boundary testing of the 9-student slot capacity, weekday-constrained calendar picker, 4-week cancellation rule, camp theme management, and automated medical form dispatch.
-3. **Cross-Device Responsiveness & Cross-Browser Stability:** Flawless rendering on iOS, Android, tablets, and desktop displays.
+Rule tests (capacity, billing dates, cancellation) are written as **automated tests** (unit + API tests against a MongoDB replica set) so they run on every change, not only once before launch.
 
 ---
 
-## 2. Reference Content Verification Checklist (Page-by-Page)
+## 2. Content Verification Checklist (Page-by-Page)
 
-Before staging sign-off, every page must pass side-by-side verification against `https://stemotics.com/`:
-
-| Page / Section | Reference URL | Verification Items | Pass/Fail Criteria |
+| Page / Section | Reference URL | What to check | Pass criteria |
 |---|---|---|---|
-| **Homepage** | `/` | All 5 slider banners, 21 sections, headline texts, Trustindex reviews, 4 metric counters, footer | Exact wording preserved; metrics editable in CMS |
-| **Course Catalog** | `/courses/` | All 5 filter groups, option checkboxes, instant filter re-render, product cards | All 5 groups active; immediate client-side filter update |
-| **Course Details** | `/product/*` | Start date picker, weekday matching, child name input, age select, 9-student limit | Only correct weekdays clickable; slot disables at 9 |
-| **Camps Hub** | `/product-category/camps/` | PD Day, Winter Break, March Break, and Summer camps, theme descriptions, care options | All themes listed; care addons selectable |
-| **Camp Attendance** | Admin Module | Printable PDF attendance sheet filterable by day, week, theme, and age | Clean 8.5" x 11" landscape PDF with signature lines |
-| **Medical Release** | `/personal-information-...` | All 16 verified fields, emergency contacts, allergy notes, outdoor & photo consents | Form submits to encrypted DB; updates roster status |
-| **About Us** | `/about-us/` | Mission, Goal, Vision, Robotics Values, TOT programs copy | Verbatim copy match |
-| **FAQ** | `/faq/` | All 15 verified Q&A accordions | All 15 questions and answers present |
-| **Cancellation Policy** | `/cancellation-refund-policy/` | On-site camp terms, off-site terms, + 4-week recurring subscription rule | Both legacy camp terms and new 4-week rule present |
-| **Partner With Us** | `/partner-with-us/` | Franchise opportunity points, curriculum details, ROI highlights | Verbatim copy match |
-| **Community Partners** | `/school-library-...` | 20+ Schools, 14+ Libraries, 35+ Community Centres | All partner institutions cataloged |
-| **Image & Video Gallery**| `/image-gallery/`, `/video-gallery/`| Photos, YouTube video embeds, entry titles, dates | Displayed in ASCENDING date order |
+| **Homepage** | `/` | 5 real slides (no "Lorem ipsum" placeholders), content sections, testimonials, impact section, team section, newsletter, footer | Wording approved by STEMOTICS; slides, figures and team editable in CMS |
+| **Course Catalog** | `/courses/` | 5 filter groups and options, product cards | Filter results match tagging (OR within group, AND across groups) |
+| **Product pages** | `/product/*` (29) | Levels, time slots, weekday picker, child name, age | Content matches each live product page; slot and date rules work |
+| **Camps** | camps page | PD Day, Winter, March Break products; themes; care options | 3 camps with their themes |
+| **Medical Form** | medical form URL | All 16 fields from Phase 01 §6.7, consent texts | Submits, encrypts, updates roster status |
+| **About Us** | `/about-us/` | Mission, vision, goals, services, TOT | Full live text migrated (not the abridged audit summary) |
+| **FAQ** | `/faq/` | All 15 Q&As, class-size answer updated | Full live text; class-size copy consistent with new rule |
+| **Cancellation Policy** | `/cancellation-refund-policy/` | On-site, off-site (deposit refund rules), transfers, new recurring-billing clause | Live terms preserved; recurring clause wording approved (D-9) |
+| **Partner With Us** | `/partner-with-us/` | Full page copy | Matches live page |
+| **Community Partners** | `/school-library-community-center/` | 19 schools, 13 libraries, community centre list | Cleaned list approved by STEMOTICS |
+| **Image & Video Gallery** | `/image-gallery/`, `/video-gallery/` | Titles, dates, media | Ascending date order |
+| **Redirects** | All old URLs | Every URL from the live sitemaps | Each returns 200 or a single 301 to the right page (D-10) |
 
 ---
 
-## 3. Operational Logic & Functional Test Matrix
+## 3. Brief Rule Tests
 
-```mermaid
-graph TD
-    subgraph Test Suite 1: Capacity & Slot Logic
-        A1[Enrollment 1 to 8: Slot Remains Open]
-        A2[Enrollment 9: Slot Auto-Closes to FULL]
-        A3[Enrollment 10: Blocked by System]
-        A4[Cancellation / Cap Increase: Auto-Reopens]
-    end
+### 3.1 Shared Time-Slot Capacity (Brief §1)
 
-    subgraph Test Suite 2: Date Picker Constraint
-        B1[Select Monday Course Slot]
-        B2[Verify Tuesdays - Sundays Grayed Out]
-        B3[Verify Studio Holidays Grayed Out]
-        B4[Verify Start Date Anchors Subscription]
-    end
+Setup: slot **Monday 5–6 PM**, capacity 9. Coding Junior, Robotics Senior and Game Design Junior are all offered in it.
 
-    subgraph Test Suite 3: 4-Week Cancellation Rule
-        C1[Submit Notice >= 28 Days Prior]
-        C2[Assert Zero Further Charges After Cycle]
-        C3[Submit Notice < 28 Days Prior]
-        C4[Assert Next Immediate Charge Applies, Terminates Followed Cycle]
-    end
-```
+| ID | Steps | Expected result |
+|---|---|---|
+| CAP-01 | Enrol 5 children in Coding Junior and 3 in Robotics Senior in Mon 5 PM | Slot shows 1 seat left on **all three** programs |
+| CAP-02 | Enrol 1 child in Game Design Junior in Mon 5 PM | Slot is Full on all three programs; Add to Cart disabled for that slot |
+| CAP-03 | Send a direct API request to enrol a 10th child in any program in that slot | `409 TIME_SLOT_FULL`; count stays 9 |
+| CAP-04 | Staff raise Mon 5 PM capacity to 10 | Slot immediately shows 1 seat left on all three programs |
+| CAP-05 | A child's enrolment ends (after cancellation service end date) | Count drops by 1; slot reopens automatically |
+| CAP-06 | **Concurrency:** with 1 seat left, fire 10 simultaneous checkout requests for that slot | Exactly 1 succeeds, 9 get `409`; count = capacity |
+| CAP-07 | Start checkout (seat held), abandon payment for 15+ minutes | Hold expires; seat released once; slot reopens |
+| CAP-08 | Staff lower capacity from 9 to 7 while 9 are enrolled | No one is removed; slot stays Full until count < 7 |
+| CAP-09 | Mon 6–7 PM slot is unaffected by Mon 5–6 PM being full | Mon 6 PM still selectable |
+| CAP-10 | Camp registrations | Do not use or change any time-slot count |
 
-### 3.1 Slot Capacity Boundary Tests (9-Student Rule)
+### 3.2 Per-Slot Roster (Brief §2)
 
-- **Test Case CAP-01:** Enroll 8 students in `Monday 5:00 PM` slot. Verify slot status is `OPEN`, showing `1 seat available`.
-- **Test Case CAP-02:** Enroll 9th student. Verify slot status immediately shifts to `FULL / CLOSED`. Verify Add to Cart button is disabled.
-- **Test Case CAP-03:** Attempt API injection to register 10th student. Verify backend returns `409 Conflict: Slot Capacity Reached`.
-- **Test Case CAP-04:** Staff increases slot capacity to 10 in CMS. Verify slot immediately re-opens to `OPEN` on website.
-- **Test Case CAP-05:** Student cancels or transfers out. Verify slot immediately decrements count to 8 and reopens.
+| ID | Steps | Expected result |
+|---|---|---|
+| ROS-01 | Print Mon 5 PM roster after CAP-02 | 9 children from 3 programs, each with name, age, program (and level), start date |
+| ROS-02 | Print preview | Fits Letter landscape; headers repeat on each page |
 
-### 3.2 Weekday Date Picker Test Matrix
+### 3.3 Weekday Date Picker (Brief §12)
 
-- **Test Case DATE-01:** Select a Wednesday 5:00 PM course slot. Verify calendar picker enables **only Wednesdays**.
-- **Test Case DATE-02:** Verify past dates are strictly disabled.
-- **Test Case DATE-03:** Verify dates designated as statutory holidays (e.g. Christmas Day, Thanksgiving Monday) are disabled with tooltip *"Studio Closed"*.
-- **Test Case DATE-04:** Verify selected date correctly populates the database enrollment record as the billing anchor date.
+| ID | Steps | Expected result |
+|---|---|---|
+| DATE-01 | Choose a Wednesday 5 PM slot | Only Wednesdays selectable |
+| DATE-02 | Look at past dates | All disabled |
+| DATE-03 | Submit a Tuesday start date for a Wednesday slot via the API | Rejected with validation error |
+| DATE-04 | Test with the browser set to a different time zone (e.g. UTC−8 and UTC+5) | Same weekdays enabled; stored date unchanged |
+| DATE-05 | Select Monday, April 12, 2027 | Enrolment `startDate = 2027-04-12`; subscription anchor day 12 |
+| DATE-06 [Proposed] | Staff add Good Friday (2027-03-26) as a closure | Shown as closed in Friday slots |
 
-### 3.3 4-Week Cancellation Engine Tests
+### 3.4 Monthly Billing (Brief §5)
 
-- **Test Case CANC-01 (>= 28 Days Notice):** Student billing date is May 15. Cancellation request submitted on April 10 (35 days notice).  
-  *Expected Result:* Cancellation approved with no further charges. Service ends on May 14.
-- **Test Case CANC-02 (< 28 Days Notice):** Student billing date is May 15. Cancellation request submitted on April 25 (20 days notice).  
-  *Expected Result:* System flags rule disclosure. May 15 payment scheduled to process. Service terminates June 14 with no further renewals.
-- **Test Case CANC-03 (Staff Override):** Staff manually selects "Waive 4-week notice and cancel immediately".  
-  *Expected Result:* Subscription terminated immediately; no further charges queued.
+| ID | Steps | Expected result |
+|---|---|---|
+| BILL-01 | Start date 2027-04-14 | First charge at checkout; next charges 2027-05-14, 2027-06-14 |
+| BILL-02 | Anchor day 31, starting 2027-01-31 | Charges on 2027-02-28, 2027-03-31, 2027-04-30, 2027-05-31 |
+| BILL-03 | Run the billing job twice on the same day | Each due subscription charged exactly once (unique Charge per cycle) |
+| BILL-04 | Card declined on renewal | Charge `failed`, subscription `pastDue`, parent emailed, staff alerted; retry on +3 days |
+| BILL-05 | Billing job runs at 03:00 Toronto time | Uses Toronto date even when the server clock is UTC |
 
-### 3.4 Automated Medical Form Dispatch Tests
+### 3.5 4-Week Cancellation Rule (Brief §5)
 
-- **Test Case MED-01:** Parent enrolls child in PD Day Camp for the first time.  
-  *Expected Result:* Child created; Medical Status = `PENDING`. Immediate transactional email dispatched containing secure single-use token link (`/forms/medical/{token}`).
-- **Test Case MED-02:** Parent completes and submits medical form.  
-  *Expected Result:* Medical record updated in database; Child roster badge shifts immediately from `PENDING` to `COMPLETE` in instructor dashboard.
-- **Test Case MED-03:** Parent re-enrolls same child in another program 2 months later.  
-  *Expected Result:* System detects existing valid medical record (<12 months old); does not re-prompt parent; child flagged `COMPLETE` automatically.
+Setup: anchor day 15. Last charge April 15, 2027; **next billing date N = May 15, 2027**.
+
+| ID | Request date | Notice | Expected result |
+|---|---|---|---|
+| CANC-01 | 2027-04-16 | 29 days | **Case A:** no further charges; classes end **2027-05-14** |
+| CANC-02 | 2027-04-17 | 28 days (boundary) | **Case A:** no further charges; classes end 2027-05-14 |
+| CANC-03 | 2027-04-18 | 27 days (boundary) | **Case B:** May 15 charged; classes end **2027-06-14**; no charge on June 15 |
+| CANC-04 | 2027-04-25 | 20 days | **Case B:** same as CANC-03 |
+| CANC-05 | Any | — | The outcome (Case A or B, last charge date, last class date) is shown **before** the parent confirms, and in the confirmation email |
+| CANC-06 | Case B, May 15 card declined | — | Subscription keeps `cancellation_pending`; retry follows BILL-04; no charge after May 15 cycle |
+| CANC-07 | Notice spanning the DST change (N = 2027-04-10, request 2027-03-13) | 28 days | Case A (DST must not reduce the count to 27) |
+| CANC-08 [Proposed] | Staff "cancel immediately" override | — | No further charges; override logged with staff user and reason |
+
+### 3.6 Camps (Brief §3)
+
+| ID | Steps | Expected result |
+|---|---|---|
+| CAMP-01 | Staff rename a theme | New name on the site and on future attendance sheets |
+| CAMP-02 | Staff add a 5th theme / retire a theme | Retired theme hidden from new registrations but kept on past sheets |
+| CAMP-03 | Attendance sheet filtered by day, then week, then theme, then age group | Correct children each time |
+| CAMP-04 | Attendance sheet columns | Name, age, theme, parent phone, parent email, sign-in time & signature, sign-out time & signature |
+| CAMP-05 | Bulk email to a camp filtered by theme + date | Recipient preview correct; one email per parent; send logged |
+
+### 3.7 Medical Form (Brief §4)
+
+| ID | Steps | Expected result |
+|---|---|---|
+| MED-01 | Parent enrols a child for the first time (PD Day Camp) | Pending medical record created (with empty fields); email with secure link sent; child shows `Pending` |
+| MED-02 | Parent submits the form | Required fields enforced; status `Complete` on rosters and attendance sheets |
+| MED-03 | Same child enrolled in a regular program later | No new email; status unchanged |
+| MED-04 | Open an expired or altered token link | Rejected; no data shown |
+| MED-05 | Staff click "Resend link" | New token emailed; old token invalid |
+| MED-06 | Read the raw MongoDB document without the encryption key | Allergies, medical notes, emergency contacts, address are unreadable |
+| MED-07 | Content Editor role requests a medical form via the API | `403` |
+
+### 3.8 Filters, Gallery, Accounts
+
+| ID | Steps | Expected result |
+|---|---|---|
+| FIL-01 | Staff create a new filter group "Location" with 2 options and tag products | Appears in sidebar; filtering works without a deploy |
+| FIL-02 | Select Robotics + Coding (same group) and Ages 6-8 | Products that are (Robotics OR Coding) AND Ages 6-8 |
+| FIL-03 | Delete an option used by 5 products | Confirmation shows "5 products"; tags removed |
+| GAL-01 | Add entries dated 2026-07-22, 2025-03-01, 2026-01-10 | Displayed 2025-03-01, 2026-01-10, 2026-07-22 |
+| ACC-01 | Guest checkout of a monthly program, then "Manage subscription" link | Guest can claim the account and cancel |
+| ACC-02 | Password reset | Single-use, time-limited link; old sessions invalidated |
+| ACC-03 | Order placed | Order SMS received; marketing SMS only if opted in; STOP stops marketing SMS |
 
 ---
 
-## 4. Payment Gateway Integration Testing (Stripe & Helcim)
+## 4. Payment Integration Testing (sandbox)
 
-- **Test Case PAY-01 (Stripe One-Time Payment):** Complete checkout for March Break Camp using Stripe test credit cards (Visa, MasterCard, Amex). Verify webhook receipt, order creation, and receipt email.
-- **Test Case PAY-02 (Helcim Recurring Subscription):** Enroll in Regular Program. Verify credit card tokenized in Helcim vault, initial charge processed, and recurring schedule anchored to start date.
-- **Test Case PAY-03 (Subscription Charge Failure):** Simulate declined card on renewal date. Verify webhook triggers `past_due` status, automated parent payment retry email, and staff dashboard alert.
-- **Test Case PAY-04 (PCI-DSS Scrape Prevention):** Verify network inspector contains zero unencrypted card numbers transmitted to application servers.
+Processor roles depend on [Decision D-1](README.md#5-pending-decisions).
+
+- **PAY-01:** One-time purchase (camp) with test cards (approved, declined, 3-D Secure where supported). Webhook received, order created, receipt sent.
+- **PAY-02:** Regular program checkout: card saved as a token, first charge approved, subscription created with correct anchor.
+- **PAY-03:** Renewal decline handled as in BILL-04.
+- **PAY-04:** Webhook with a wrong signature → `400`, nothing changed. Same webhook delivered twice → processed once.
+- **PAY-05:** Browser network log shows card numbers sent only to the processor's domain, never to the STEMOTICS API.
 
 ---
 
-## 5. Responsive Design, Accessibility & Performance Testing
+## 5. Responsive Design, Accessibility & Performance
 
-### 5.1 Device & Browser Test Coverage
-- **Mobile Devices:** Apple iPhone (Safari iOS 16–18), Samsung Galaxy (Chrome), Google Pixel.
-- **Tablet Devices:** Apple iPad Pro / Air (Safari & Chrome), Microsoft Surface (Edge).
-- **Desktop Browsers:** Google Chrome (v120+), Mozilla Firefox (v120+), Apple Safari (v17+), Microsoft Edge.
+### 5.1 Devices & Browsers
+- iPhone (Safari, current and previous iOS), Android (Chrome), iPad, Windows and macOS desktops (current Chrome, Edge, Firefox, Safari).
 
-### 5.2 Accessibility Testing (WCAG 2.1 AA)
-- Automated testing via Axe-Core and Lighthouse Accessibility audit (Target score: 100).
-- High contrast verification (minimum 4.5:1 ratio for all body text against white and dark backgrounds).
-- Full keyboard navigation (focus rings on all interactive elements, logical tab order, ESC key closes modals and cart drawer).
-- Screen reader testing (NVDA on Windows, VoiceOver on iOS/macOS).
+### 5.2 Accessibility (WCAG 2.1 AA)
+- Automated checks with axe-core / Lighthouse on every page template.
+- Contrast ≥ 4.5:1 for body text (check lime `#D9F293` combinations in particular).
+- Full keyboard use: date picker, filters, cart, checkout, admin forms. Visible focus; ESC closes dialogs.
+- Screen reader spot checks (NVDA on Windows, VoiceOver on iOS/macOS) for checkout and the medical form.
+
+### 5.3 Performance
+- LCP < 2.0 s and INP < 200 ms on mobile for home, course listing and product pages (see [Phase 08 §5](Phase-08-SEO-Security-Backups.md)).
 
 ---
 
 ## 6. Verification & Acceptance Criteria
 
-- [x] Every page and section audited in Phase 01 verified against staging build.
-- [x] 9-student default capacity and automated open/close logic proven with boundary tests.
-- [x] Weekday-constrained start date picker thoroughly validated.
-- [x] 4-week cancellation notice engine mathematically tested for both compliant and late notices.
-- [x] Automated medical form email trigger and staff status badge tracking verified.
-- [x] Printable PDF rosters and camp attendance sheets verified in landscape print view.
-- [x] Stripe and Helcim payment flows and webhook handlers tested in sandbox environments.
-- [x] WCAG 2.1 AA accessibility and cross-browser responsiveness verified.
+- [ ] Content checklist (§2) signed off by STEMOTICS.
+- [ ] All CAP, ROS, DATE, BILL and CANC tests automated and passing.
+- [ ] CAMP, MED, FIL, GAL and ACC tests passing.
+- [ ] Payment sandbox tests passing for the processors chosen in D-1.
+- [ ] WCAG 2.1 AA checks and cross-device tests passing.
+- [ ] Redirect map fully tested.

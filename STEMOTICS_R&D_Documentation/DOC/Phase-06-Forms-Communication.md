@@ -2,8 +2,8 @@
 
 ## 1. Executive Summary & Communication Scope
 
-This phase delivers two interconnected operational capabilities:
-1. **Automated Medical & Emergency Information Workflow:** Ensuring 100% compliance with child safety policies by automatically dispatching, tracking, and managing emergency medical records for enrolled children.
+This phase delivers three connected capabilities:
+1. **Automated Medical & Emergency Information Workflow:** Automatically sending, tracking and storing medical/emergency information for enrolled children.
 2. **Custom Drag-and-Drop Form Builder:** Allowing non-technical staff to create custom forms (e.g. School Student Registrations, STEM Night inquiries) and generate public shareable links.
 3. **Multi-Channel Communication Engine:** Transactional and marketing email broadcasts, combined with Twilio SMS notifications tailored to Canadian telecommunications regulations.
 
@@ -11,7 +11,9 @@ This phase delivers two interconnected operational capabilities:
 
 ## 2. Automated Medical & Emergency Form Workflow
 
-The client brief mandates: **"Email a medical/emergency form link to parents when a child is first signed in to any regular program or camp. Collect emergency contacts, allergies, and medical notes. Staff can see whether each child's form is complete."**
+Brief §4: *"The first time a child is signed in at any program (regular program or camp), the system should automatically email the parent a link to complete a medical/emergency information form — emergency contacts, allergies, medical notes, etc. Staff should be able to see, per child, whether this form has been completed."*
+
+**Interpretation:** "signed in" is read as **first enrolment** (paid registration), so the form arrives before the first class. Pending confirmation — [Decision D-6](README.md#5-pending-decisions). The form is sent **once per child**; the brief requires no renewal. Annual renewal is [Proposed] only.
 
 ```mermaid
 sequenceDiagram
@@ -20,53 +22,44 @@ sequenceDiagram
     participant Web as Enrollment Engine
     participant DB as MongoDB
     participant Mail as Transactional Email Service
-    participant Staff as Staff Dashboard
+    participant Staff as Staff Rosters
 
-    Parent->>Web: Completes Enrollment for Child
-    Web->>DB: Check if Medical Form on file for Child
-    alt Medical Form Missing or Outdated (>12 Months)
-        Web->>DB: Create Pending Medical Record Token
-        Web->>Mail: Trigger "Immediate Action Required: Complete Emergency Form"
-        Mail-->>Parent: Sends Email with Secure Direct Link (`/forms/medical/{token}`)
-        Web->>Staff: Flag Child in Attendance Roster as [PENDING MEDICAL]
-    else Medical Form Complete & Current
-        Web->>Staff: Flag Child in Attendance Roster as [MEDICAL COMPLETE]
+    Parent->>Web: Completes paid enrolment for a child
+    Web->>DB: Does this child already have a medical form record?
+    alt No record (child's first enrolment)
+        Web->>DB: Create medical form record (status = pending, hashed token, expiry)
+        Web->>Mail: Send "Please complete your child's medical & emergency form"
+        Mail-->>Parent: Email with secure link /forms/medical/{token}
+        Web->>Staff: Child shows [PENDING] on rosters
+    else Record exists (pending or complete)
+        Web->>Staff: Child shows current status; no new email
     end
 
-    Parent->>Web: Opens Link, Fills Allergies, Emergency Contacts & Consents
-    Web->>DB: Save Medical Submission & Update Status to COMPLETE
-    Web->>Staff: Roster Badge Updates Instantly to [COMPLETE]
+    Parent->>Web: Opens link, fills in form, submits
+    Web->>DB: Validate, encrypt sensitive fields, status = complete
+    Web->>Staff: Child shows [COMPLETE] on rosters
 ```
 
-### 2.1 The 16 Verified Medical Form Fields
+**Link security:** the token is random (≥ 128 bits), stored only as a hash, expires (e.g. 30 days; staff can resend), and opens only that child's form. Logged-in parents can also reach the form from the portal.
 
-Preserving all fields from the live reference site's form (`/personal-information-medical-conditions-photo-release-stemotics-camps/`):
+### 2.1 Medical Form Fields
 
-1. **Child Full Name:** Camper / Student First and Last Name.
-2. **Residential Address:** Street Address, City, Postal Code.
-3. **Main Parent / Guardian Full Name:** Primary legal guardian.
-4. **Parent / Guardian Email Address:** Synced with parent account.
-5. **Parent / Guardian Home Phone:** Landline / secondary phone.
-6. **Parent / Guardian Cell Phone:** Primary mobile phone for emergency alerts.
-7. **Emergency Contact Full Name:** Secondary contact if parents are unreachable.
-8. **Emergency Contact Relationship & Phone:** Relationship (e.g., Grandparent, Neighbor) and direct phone number.
-9. **Known Medical Conditions Status:** Radio toggle (`Yes` / `No`).
-10. **Medical Conditions Description:** If Yes, detail condition (e.g. Asthma, Epilepsy, Diabetes).
-11. **Allergies & Anaphylaxis Details:** Specific food, medication, or environmental allergies (e.g., Peanuts, Bees, Latex) and whether an EpiPen is carried.
-12. **Special Needs & Behavioral Notes:** Accommodations, sensory sensitivities, or learning assistance recommendations.
-13. **Instructor Guidance Notes:** Specific strategies to support the child's learning.
-14. **Additional Child Information:** Any other vital details for instructors.
-15. **Outdoor Program Parental Consent:** Radio toggle (`Yes` / `No`) consenting to supervised 40-minute daily outdoor physical activity at nearby parks.
-16. **Photo & Video Release Consent:** Radio toggle (`Yes` / `No`) consenting to taking photographs and/or videos for educational, social media, and promotional use.
+The fields are exactly the 16 fields of the live form, as listed in [Phase 01 §6.7](Phase-01-Website-Audit.md) (single source of truth). Two improvements are [Proposed]:
+- A "Please describe" text field shown when "known medical conditions" = Yes (the live form has only the Yes/No).
+- Emergency contact **relationship**.
 
-### 2.2 Staff Medical Dashboard & Tracking Capabilities
+**Medical form vs. form builder (Brief §11, [Decision D-11](README.md#5-pending-decisions)):** the brief says the form builder "could be the tool that creates" the medical form, which is also needed for camps **and off-site programs**. Recommendation: the medical form is a **system form** built on the form builder, with its 16 core fields **locked** (staff can edit labels/help text and add extra questions, but cannot delete core fields). Rosters, the per-child status and encryption depend on knowing exactly which field holds allergies and emergency contacts.
 
-- **Real-Time Status Indicator:** Every child on every course roster and camp attendance sheet displays a live status pill:
-  - `Complete` (Green): Valid medical record on file within past 12 months.
-  - `Pending` (Amber): Form link dispatched, parent has not yet submitted.
-  - `Overdue / Alert` (Red): Class start date within 48 hours and form still incomplete.
-- **1-Click Reminder Dispatch:** Staff can click "Send Reminder" next to any pending student to instantly re-email (and SMS) the secure form link.
-- **Emergency Quick-Card View:** Clicking a student's medical badge opens a high-contrast emergency card showing: Primary contacts, emergency contact phone, listed allergies, and EpiPen alerts—ideal for quick mobile access by instructors during an incident.
+### 2.2 Staff Tracking
+
+- **Status per child** (Brief §4), shown on time-slot rosters, camp attendance sheets and the child's admin page:
+  - `Complete` (green): form submitted.
+  - `Pending` (amber): link sent, not yet submitted.
+  - [Proposed] `Overdue` (red): pending and the child's first class/camp day is within 48 hours.
+- **Pending list:** filterable list of all children with pending forms.
+- **Resend link:** staff can resend the email (and [Proposed] SMS) for a pending child.
+- [Proposed] **Automatic reminders:** a reminder email 3 days before the child's first class/camp day if still pending — not a daily email.
+- [Proposed] **Emergency card:** high-contrast view of contacts, allergies and medical notes for staff during an incident, visible only to roles allowed to see medical data.
 
 ---
 
@@ -89,11 +82,13 @@ graph LR
 - **Specialty Inputs:** File/Document upload (PDF/images), Digital signature pad, Section divider with descriptive text, Consent checkbox with terms link.
 - **Hidden / Metadata Fields:** Auto-capture UTM campaign tags, referral sources, and submission timestamps.
 
-### 3.2 Pre-Built Form Templates Available to Staff
-1. **Medical & Emergency Release Form Template:** Powers the automated medical request workflow with all 16 standardized fields pre-loaded.
-2. **School Student Registration Form Template:** For schools booking workshops or classroom trips, capturing school name, teacher contact, grade, headcount, and workshop selections.
-3. **STEM Night School Inquiry Form Template:** Form for school principals and parent councils to request on-site STEM Night events with package options (A, B, C).
-4. **General Contact & Consultation Form Template:** Powers the `/contact-us` and general inquiry pages.
+### 3.2 Forms Named in the Brief (§11)
+1. **Medical information / emergency contact form** — for camps and off-site programs; also the §4 automated form (system form with locked core fields, see §2.1).
+2. **School student registration form** — a school uses it to enrol its students in STEMOTICS programs (school name, teacher contact, student names, grades, program).
+
+[Proposed] templates: STEM Night inquiry, general contact form (`/contact-us`).
+
+Form builder submissions that contain medical data are encrypted and access-controlled the same way as the system medical form. File uploads are limited by type and size and stored privately (not on the public CDN).
 
 ### 3.3 Form Submission Management
 - Searchable, filterable table of all responses in the admin panel.
@@ -108,13 +103,13 @@ graph LR
 - **Transactional Triggers:**
   - Order / Enrollment Confirmation & Payment Receipt.
   - Automated Medical Form Link dispatch.
-  - Monthly Subscription Successful Charge & Invoice.
-  - Monthly Subscription Failed Charge Notice (with 1-click update link).
-  - 4-Week Cancellation Request Confirmation.
-- **Broadcast Camp & Course Emails:**
-  - Staff compose rich-text messages with attachments.
-  - Filter recipients by: Camp season, specific date, theme, age group, or medical status.
-  - Delivery analytics: Sent count, Delivered, Bounced, Unsubscribed.
+  - Monthly Subscription Successful Charge & Receipt.
+  - Monthly Subscription Failed Charge Notice (with card update link).
+  - Cancellation Confirmation (showing Case A/B outcome, last charge date and last class date).
+  - Password reset.
+- **Camp bulk email (Brief §3):** see [Phase 04 §3.4](Phase-04-Course-Camp-Management.md) — filter by camp, theme, age group, date.
+- **Newsletters & promotions (Brief §7):** see [Phase 07 §7](Phase-07-Gallery-Content-Management.md).
+- **Sending:** through a transactional email provider (SendGrid / Amazon SES / Resend) with SPF, DKIM and DMARC set up on `stemotics.com` so emails are not flagged as spam.
 
 ### 4.2 Twilio SMS Integration & Canadian Compliance
 
@@ -122,24 +117,25 @@ The platform integrates Twilio's Messaging API for both automated order updates 
 
 | Message Category | Trigger & Content Example | Opt-In / Legal Requirement |
 |---|---|---|
-| **Transactional SMS** | *"STEMOTICS: Confirmation for Oliver in Robotics Junior starting Mon Apr 12 @ 5PM. View details: https://stemotics.com/acc/123"* | Implied consent based on commercial transaction. Customer can opt out anytime. |
-| **Emergency Roster Alert** | *"URGENT STEMOTICS: PD Day Camp cancelled today due to severe weather. Full refund processed. Check your email for details."* | Emergency / safety operational notice. |
-| **Marketing & Offer SMS** | *"STEMOTICS Promo: Early Bird March Break Camp registration is now open! Save 15% with code MARCH15 before Friday: https://stemotics.com/camps"* | **Strict CASL Compliance:** Requires explicit opt-in checkbox during checkout or form submission: `[x] I agree to receive promotional SMS messages from STEMOTICS.` |
+| **Order SMS (Brief §10)** | *"STEMOTICS: Order #1234 confirmed — Robotics Junior, Mon 5 PM, starting Apr 12. Details in your email. Reply STOP to opt out."* | Transactional message about a purchase. Does not need marketing consent, but must identify STEMOTICS and honour STOP. |
+| **Marketing SMS (Brief §10)** | *"STEMOTICS: March Break Camp registration is open! stemotics.com/camps Reply STOP to unsubscribe."* | **CASL:** only to customers who ticked an **unticked-by-default** opt-in box (`[ ] I agree to receive promotional text messages from STEMOTICS`). Store when, where and how consent was given. Include sender identification and an unsubscribe method in every message. |
+| [Proposed] **Urgent operational SMS** | *"STEMOTICS: Today's PD Day Camp is cancelled due to weather. Details by email."* | Operational notice to registered parents. |
 
-**Canadian SMS Compliance Features:**
-- Automated reply handling for `STOP`, `UNSUBSCRIBE`, `CANCEL`, `HELP`.
-- Recipient phone validation (ensuring valid Canadian/US 10-digit mobile number format `+1 (XXX) XXX-XXXX`).
-- Message rate limiting to prevent telecommunications carrier filtering.
+**SMS compliance and setup:**
+- `STOP` / `UNSUBSCRIBE` / `CANCEL` / `HELP` handling (Twilio Advanced Opt-Out) and sync of opt-outs back to the customer record.
+- Phone numbers stored in E.164 format (`+15195551234`).
+- **Sender registration:** Canadian/US carriers filter unregistered business traffic. Plan for Twilio sender registration (e.g. toll-free number verification) before launch; it can take days to weeks.
+- Cost estimate per Twilio's Canada SMS pricing (as referenced in Brief §10) and expected monthly volume, shared with STEMOTICS before launch.
 
 ---
 
 ## 5. Verification & Acceptance Criteria
 
-- [x] Automated email link sent to parents when a child is enrolled without an active medical form.
-- [x] All 16 verified fields from the reference medical form are collected and encrypted.
-- [x] Staff dashboard displays real-time medical form completion status per child across all rosters.
-- [x] 1-click reminder triggers for pending or overdue medical forms.
-- [x] Drag-and-drop form builder allows creation of forms and shareable public links without coding.
-- [x] Pre-built templates for Medical Form and School Student Registration.
-- [x] Twilio SMS integrated for order notifications and opt-in marketing broadcasts.
-- [x] CASL compliance enforced for all Canadian marketing communications.
+- [ ] Medical form link emailed automatically on a child's first enrolment (per D-6), and not re-sent on later enrolments.
+- [ ] All 16 live-form fields collected; sensitive fields encrypted.
+- [ ] Staff see Complete/Pending per child on rosters, attendance sheets and a pending list.
+- [ ] Staff can resend the link.
+- [ ] Staff can build forms and get a shareable link without coding.
+- [ ] Medical form (camps and off-site) and school student registration form available.
+- [ ] Order SMS sent for every order; marketing SMS only to opted-in customers; STOP honoured.
+- [ ] Twilio sender registration approved before launch.
