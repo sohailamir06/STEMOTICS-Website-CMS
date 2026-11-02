@@ -4,7 +4,7 @@
 
 A central requirement from the client specifications is that **staff must be able to maintain all website content, courses, operational settings, forms, attendance, and marketing without developer intervention**.
 
-This document defines the complete architecture of the Content Management System (CMS) and Admin Platform. It organizes the system into **9 consolidated modules** matching the client's requirements table, implements an intuitive visual block builder for non-technical users, and provides granular Role-Based Access Control (RBAC).
+This document defines the complete architecture of the Content Management System (CMS) and Admin Platform. It organizes the system into **9 consolidated modules** matching the client's requirements table, implements an intuitive visual block builder for non-technical users, incorporates pure JavaScript high-performance media uploading, and provides granular Role-Based Access Control (RBAC).
 
 ---
 
@@ -39,29 +39,30 @@ graph TD
 
 ---
 
-## 3. Visual Page Builder for Non-Technical Users
+## 3. High-Performance Visual Content Editor for Non-Technical Users
 
-To ensure non-technical staff can update any page without breaking layout or styling, the platform provides a **Section-Based Visual Editor**:
+To ensure non-technical staff can update any page without breaking layout or styling, and to prevent media upload slowdowns, the platform provides a **Section-Based Visual Editor**:
 
 ### 3.1 Core Visual Editor Features
 
 1. **Inline & Side-Panel Text Editing:** Staff click any text block or heading directly on the canvas or via an intuitive side-panel to update wording, formatting, and links.
-2. **Media Replacement with Auto-Optimization:** Image replacement with drag-and-drop upload, automatic WebP conversion, thumbnail generation, and alt-text field.
-3. **Button Management:** Staff can change button label, button style (Primary Blue, Secondary Dark, Lime Accent, Outline), and target URL (internal page picker or external link).
-4. **Section Reordering & Visibility:** Drag-and-drop handle to reorder sections vertically on any page, with a 1-click eye toggle (`Show / Hide`) to disable seasonal sections (e.g. hiding Winter Camp after January).
-5. **Live Device Preview:** Instant toggle between Desktop (1440px), Tablet (768px), and Mobile (375px) viewports before publishing.
-6. **Revision History & Rollback:** Automatic version snapshot created on every publish. Staff can preview and revert to any historical version with 1 click.
+2. **TipTap Headless Rich-Text Integration:** Uses TipTap (`@tiptap/react`) for rich text formatting. Staff get a clean floating formatting bar (Bold, Italic, Bullet Lists, Links, Embeds) that produces clean semantic markup without breaking custom website styles.
+3. **Direct-to-Cloud Fast Media Uploader (Uppy.js):** Image replacement with drag-and-drop upload using `@uppy/react`. Files stream directly to the Cloudinary CDN via presigned signatures. Uploading 15MB camera originals completes in seconds without consuming Node.js server CPU or memory.
+4. **Button Management:** Staff can change button label, button style (Primary Blue, Secondary Dark, Lime Accent, Outline), and target URL (internal page picker or external link).
+5. **Section Reordering & Visibility:** Drag-and-drop handle to reorder sections vertically on any page, with a 1-click eye toggle (`Show / Hide`) to disable seasonal sections (e.g. hiding Winter Camp after January).
+6. **Live Device Preview:** Instant toggle between Desktop (1440px), Tablet (768px), and Mobile (375px) viewports before publishing.
+7. **Revision History & Rollback:** Automatic version snapshot created on every publish. Staff can preview and revert to any historical version with 1 click.
 
 ### 3.2 Pre-Configured Content Blocks
 
 The visual CMS includes purpose-built blocks reflecting the reference website:
 - **Hero Slider Block:** Add/reorder slides, configure background image, title, subtext, button text, and button link.
-- **Icon / Feature Cards Block:** Title, description, icon picker (FontAwesome / Lucide), optional badge.
+- **Icon / Feature Cards Block:** Title, description, icon picker (Lucide React), optional badge.
 - **Course Grid Block:** Select category or query rules (e.g. "Show latest Regular Programs"), set card count, toggle price visibility.
 - **Metric Counter Block:** Number, prefix/suffix (e.g. `5,000+`), label, animated count-up toggle.
 - **Testimonials Carousel Block:** Select verified parent reviews, show/hide star rating, author name, review source.
-- **Accordion / FAQ Block:** Reorderable questions and rich-text answers with collapsible behavior.
-- **Media Gallery Block:** Image grid or video embed grid with title, date, and lightbox behavior.
+- **Accordion / FAQ Block:** Reorderable questions and TipTap rich-text answers with collapsible behavior.
+- **Media Gallery Block:** Image grid or video embed grid with title, date, and lightbox behavior (enforcing ascending date order).
 - **Call-to-Action Banner Block:** High-contrast background with custom headline, body, and button actions.
 
 ---
@@ -90,11 +91,11 @@ The CMS integrates with secure object storage (Cloudinary / AWS S3) via a unifie
 
 ```mermaid
 graph LR
-    A[Staff Uploads File] --> B[Server-side Validation]
-    B --> C[Image Compression & WebP Conversion]
-    C --> D[Generate Thumbnails: 150px, 600px, 1200px]
-    D --> E[Store in CDN Cloud Storage]
-    E --> F[Record in MongoDB Media Collection with Metadata & Alt Text]
+    A[Staff Uploads File via Uppy] --> B[Browser Requests Signed Token 5ms]
+    B --> C[Direct Multi-Part Stream to Cloud CDN]
+    C --> D[Cloud Transforms: Auto WebP & Thumbnails 150px, 600px, 1200px]
+    D --> E[Save Clean URL & Dimensions in MongoDB Media Collection]
+    E --> F[Instant Thumbnail Available in CMS Grid]
 ```
 
 - **Folder Organization:** Separate folders for `Courses`, `Camps`, `Banners`, `Gallery-Photos`, `Gallery-Videos`, `Staff-Avatars`, `Documents`.
@@ -120,7 +121,8 @@ To protect sensitive children's information and financial records, permissions a
 
 - [x] All 9 client-specified admin modules are fully defined and architected.
 - [x] Visual block builder allows complete page edits without developer assistance.
+- [x] TipTap rich-text integration guarantees clean formatting without layout distortion.
+- [x] Uppy.js direct CDN upload pipeline provides fast media handling for non-technical users.
 - [x] Navigation and footer managers cover all reference elements.
-- [x] Media library handles image compression, WebP formatting, and folder sorting.
 - [x] Version rollback and draft preview modes protect against accidental publishing errors.
 - [x] Granular RBAC safeguards sensitive child medical records and payment credentials.

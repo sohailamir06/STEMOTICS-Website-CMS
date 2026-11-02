@@ -12,16 +12,21 @@ This documentation incorporates the complete live audit of `https://stemotics.co
 
 ---
 
-## 2. Technology Stack & Architecture
+## 2. Technology Stack & Pure JavaScript Architecture
 
-- **Frontend Application:** React.js 19, Vite, Tailwind CSS v4, Lucide-React, Framer Motion
-- **Backend API:** Node.js (LTS v22), Express.js RESTful API, PM2 Cluster
-- **Database & Data Modeling:** MongoDB Enterprise / Atlas replica set with field-level encryption, Mongoose ODM v8
-- **Authentication & Security:** JWT with HttpOnly Secure Cookies, Granular Role-Based Access Control (RBAC), PIPEDA Compliance
-- **Dual Payment Integration:** Stripe (one-time camp registrations & credit card checkout) and Helcim (recurring monthly subscription processing)
-- **Media Asset Management:** Cloudinary CDN with automatic WebP conversion and responsive thumbnail generation
-- **Communications:** Twilio Node API for Canadian SMS (CASL compliant) and SendGrid / Amazon SES for transactional and broadcast emails
-- **Document Generation:** Puppeteer engine for generating pixel-perfect 8.5" x 11" landscape printable rosters and sign-in sheets
+The entire platform is built using a **100% pure JavaScript MERN stack**, optimized for high development velocity, seamless schema sharing, and high-performance media management:
+
+- **Frontend & Admin CMS Application:** React.js 19 (`.jsx`), Vite, Tailwind CSS v4, Lucide-React, Framer Motion
+- **Rich-Text & Content Editing:** TipTap modular headless editor (`@tiptap/react`) for clean, break-proof rich-text editing
+- **High-Speed Media Uploader:** Uppy.js (`@uppy/react`) with direct-to-cloud signed uploads, bypassing server bottlenecks
+- **Backend API Server:** Node.js (v22 LTS), Express.js RESTful API, PM2 Cluster
+- **Database & Data Modeling:** MongoDB Enterprise / Atlas replica set with field-level encryption, Mongoose ODM v8 (`.js` models)
+- **Authentication & Security:** JWT with HttpOnly Secure Cookies, bcryptjs, Granular Role-Based Access Control (RBAC), PIPEDA Compliance
+- **Dual Payment Integration:** Stripe JavaScript SDK (one-time camp registrations & credit cards) and Helcim API (recurring monthly subscriptions)
+- **Media Asset Management:** Cloudinary CDN with automatic WebP/AVIF conversion, thumbnail generation, and direct browser streaming
+- **Scheduled Background Tasks:** Node-Cron (`node-cron`) for automated nightly recurring billing and medical form reminder triggers
+- **Communications:** Twilio Node.js SDK for Canadian SMS (CASL compliant) and Nodemailer / SendGrid for transactional and broadcast emails
+- **Document Generation:** Puppeteer JavaScript headless engine for compiling pixel-perfect 8.5" x 11" landscape printable rosters and sign-in sheets
 
 ---
 
@@ -55,7 +60,7 @@ The R&D documentation is organized into 11 specialized, interdependent phases:
 1. [Phase 01 — Reference Website Audit & Content Inventory](Phase-01-Website-Audit.md)  
    *Complete audit of all 21 core pages, 29 products, 8 categories, 5 slider banners, 15 FAQs, and partner institutions.*
 2. [Phase 02 — Brand Identity, Typography & Design System](Phase-02-Brand-Design-System.md)  
-   *Verified CSS hex colors (`#00309A`, `#D9F293`), `Inter` typography hierarchy, modern UI tokens, and layout improvements.*
+   *Verified CSS hex tokens (`#00309A`, `#D9F293`), `Inter` typography hierarchy, modern UI components, and WCAG AA guidelines.*
 3. [Phase 03 — CMS Architecture & Admin Dashboard](Phase-03-CMS-Architecture.md)  
    *The 9 consolidated admin modules, visual section-based page editor, media library, and Role-Based Access Control (RBAC).*
 4. [Phase 04 — Course, Program & Camp Management](Phase-04-Course-Camp-Management.md)  
@@ -63,15 +68,15 @@ The R&D documentation is organized into 11 specialized, interdependent phases:
 5. [Phase 05 — Registration, Checkout & Parent Portal](Phase-05-Registration-Checkout.md)  
    *Guest checkout, recurring subscription engine, Stripe/Helcim dual integration, 4-week cancellation enforcement, and parent portal.*
 6. [Phase 06 — Medical Forms, Custom Forms & Communication](Phase-06-Forms-Communication.md)  
-   *Automated medical release trigger (16 verified fields), staff completion tracker, drag-and-drop custom form builder, and Twilio SMS.*
+   *Automated medical release trigger (16 verified fields), staff completion tracker, drag-and-drop form builder, and Twilio SMS.*
 7. [Phase 07 — Gallery, Testimonials, Newsletter & Homepage Content](Phase-07-Gallery-Content-Management.md)  
    *Photo/video gallery in ascending date order, hero slider administration, verified impact metrics, testimonials, and LMS link integration.*
 8. [Phase 08 — SEO, Performance, Security & Backups](Phase-08-SEO-Security-Backups.md)  
    *PIPEDA child privacy compliance, AES-256 field encryption, PCI-DSS Level 1 tokenization, Schema.org JSON-LD, and automated daily backups.*
-9. [Phase 09 — MERN Architecture & Database Design](Phase-09-MERN-Architecture.md)  
-   *Complete full-stack architecture, comprehensive Mongoose schemas, REST API route map, and background cron job workers.*
+9. [Phase 09 — Pure JavaScript MERN Architecture & High-Performance CMS Design](Phase-09-MERN-Architecture.md)  
+   *Pure JavaScript architecture, TipTap rich-text editor, Uppy.js direct CDN upload pipeline, pure JavaScript Mongoose models, and Node-Cron workers.*
 10. [Phase 10 — Testing, Content Verification & QA](Phase-10-Testing-QA.md)  
-    *Page-by-page content equivalence checks, boundary testing for slot capacity and weekday pickers, 4-week cancellation test cases, and WCAG AA accessibility.*
+    *Page-by-page content equivalence checks, boundary testing for slot capacity and weekday pickers, 4-week cancellation test cases, and accessibility audits.*
 11. [Phase 11 — Deployment, Training & Handover](Phase-11-Deployment-Handover.md)  
     *Implementation sequence following client dependencies, production infrastructure, pre-launch checklist, staff training curriculum, and handover package.*
 
@@ -79,4 +84,4 @@ The R&D documentation is organized into 11 specialized, interdependent phases:
 
 ## 5. Implementation Readiness & Next Steps
 
-All open questions and requirements from the client brief have been addressed with concrete technical and operational specifications. The documentation is 100% complete, verified against live assets, and ready for development kickoff according to the suggested phase sequence.
+All open questions and requirements from the client brief have been addressed with concrete technical and operational specifications. The documentation is 100% complete, verified against live assets, standardized on pure JavaScript, and ready for development kickoff according to the suggested phase sequence.
