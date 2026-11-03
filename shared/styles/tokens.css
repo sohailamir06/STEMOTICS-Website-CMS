@@ -1,0 +1,24 @@
+/*
+ * STEMOTICS design tokens (Tailwind CSS v4 @theme), shared by web and cms.
+ *
+ * NOT YET VERIFIED: values come from the Phase 02 draft. Confirm brand colours and
+ * fonts from the live site / logo files before design sign-off (Phase 02 §1).
+ * Usage in Tailwind classes: bg-brand, text-ink, bg-accent, border-line, etc.
+ */
+@theme {
+  --color-brand: #00309a;
+  --color-brand-dark: #002270;
+  --color-accent: #d9f293; /* lime: always pair with dark text (contrast) */
+  --color-accent-dark: #c6e673;
+  --color-ink: #111111;
+  --color-body: #222222;
+  --color-muted: #6b6b6b; /* darker than the draft #777777 to pass 4.5:1 on white */
+  --color-surface: #ffffff;
+  --color-surface-alt: #f6f6f6;
+  --color-line: #e2e1e4;
+  --color-footer: #000000;
+
+  --font-sans: 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+
+  --radius-card: 0.5rem;
+}

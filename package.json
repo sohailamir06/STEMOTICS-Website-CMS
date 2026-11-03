@@ -1,0 +1,33 @@
+{
+  "name": "stemotics",
+  "private": true,
+  "type": "module",
+  "description": "STEMOTICS website (web), staff CMS (cms), API + worker (server)",
+  "workspaces": [
+    "shared",
+    "server",
+    "web",
+    "cms"
+  ],
+  "engines": {
+    "node": ">=22.22"
+  },
+  "scripts": {
+    "dev": "concurrently -k -n server,web,cms -c blue,green,magenta \"npm run dev -w server\" \"npm run dev -w web\" \"npm run dev -w cms\"",
+    "dev:worker": "npm run worker:dev -w server",
+    "build": "npm run build -w web && npm run build -w cms",
+    "test": "npm test --workspaces --if-present",
+    "lint": "eslint .",
+    "format": "prettier --write ."
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.39.5",
+    "concurrently": "^10.0.6",
+    "eslint": "^9.39.5",
+    "eslint-plugin-react": "^7.37.5",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "globals": "^17.14.0",
+    "prettier": "^3.9.10",
+    "vitest": "^5.0.5"
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "name": "@stemotics/shared",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.js",
+    "./styles/tokens.css": "./styles/tokens.css"
+  },
+  "scripts": {
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "luxon": "^3.7.2",
+    "zod": "^4.6.7"
+  }
+}
